@@ -1,0 +1,75 @@
+MAP
+  NAME "WFS_server"
+  STATUS ON
+  SIZE 1400 1300
+  SYMBOLSET "symbols.sym"
+  EXTENT 2582739 1108919 2828726 1317743
+  UNITS METERS
+  SHAPEPATH ""
+  IMAGECOLOR 255 255 255
+  FONTSET "font.list"
+  CONFIG "PROJ_LIB" "proj"
+
+  #
+  # Start of web interface definition
+  #
+  WEB
+    METADATA
+	
+		"wfs_title"          "WFS Demo Server for MapServer" ## REQUIRED
+		"wfs_onlineresource" "https://ogc.dev.local/api/Ogc/Interface/switzerland?" ## Recommended
+		"wfs_srs"            "EPSG:2056 EPSG:4326 EPSG:3857" ## Recommended
+		"wfs_abstract"       "This text describes my WFS service." ## Recommended
+		"wfs_enable_request" "*"  # necessary
+	  
+		"wms_title"           "WMS Demo Server for MapServer"
+		"wms_onlineresource"  "https://ogc.dev.local/api/Ogc/Interface/switzerland?"
+		"wms_srs"             "EPSG:2056 EPSG:4326 EPSG:3857"
+		"wms_enable_request" "*"
+
+    END
+  END
+
+  PROJECTION
+    "init=epsg:2056"
+  END
+
+  #
+  # Start of layer definitions
+  #
+
+  ##################
+  # sections
+  ##################
+  LAYER
+    NAME "sections"
+    METADATA
+	
+      "wfs_title"         "sections" ##REQUIRED
+      "wfs_srs"           "EPSG:2056" ## REQUIRED
+      "wfs_enable_request" "*"
+      "wfs_use_default_extent_for_getfeature" "false" ## Optional (improves performance of OGR layers)
+
+      "gml_include_items" "all" ## Optional (serves all attributes for layer)
+      "gml_featureid"     "ID" ## REQUIRED
+      "gml_types"         "auto" ## Optional (automatically populate the type for the attributes)
+	  
+	  "wms_title"         "sections"   ##required 
+    END
+    TYPE POLYGON
+    STATUS ON
+    DATA "28_DKM500_BODENBEDECKUNG.shp"
+    # define source projection
+    PROJECTION
+      "init=epsg:2056"
+    END
+    CLASS
+      NAME "Section style"
+      STYLE
+        COLOR 255 128 128
+        OUTLINECOLOR 96 96 96
+      END
+    END
+  END #layer
+
+END #mapfile

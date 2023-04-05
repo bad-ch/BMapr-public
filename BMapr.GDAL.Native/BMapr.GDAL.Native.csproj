@@ -1,0 +1,275 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{39F11402-850C-4FC6-B4E8-2B50086F7037}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>BMapr.GDAL.Native</RootNamespace>
+    <AssemblyName>BMapr.GDAL.Native</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="output\gdal\data\cubewerx_extra.wkt" />
+    <None Include="output\gdal\data\default.rsc" />
+    <None Include="output\gdal\data\ecw_cs.wkt" />
+    <None Include="output\gdal\data\eedaconf.json" />
+    <None Include="output\gdal\data\epsg.wkt" />
+    <None Include="output\gdal\data\esri_StatePlane_extra.wkt" />
+    <None Include="output\gdal\data\gdalmdiminfo_output.schema.json" />
+    <None Include="output\gdal\data\gdalvrt.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="output\gdal\data\gmlasconf.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="output\gdal\data\gt_datum.csv" />
+    <None Include="output\gdal\data\gt_ellips.csv" />
+    <None Include="output\gdal\data\header.dxf" />
+    <None Include="output\gdal\data\inspire_cp_BasicPropertyUnit.gfs" />
+    <None Include="output\gdal\data\inspire_cp_CadastralBoundary.gfs" />
+    <None Include="output\gdal\data\inspire_cp_CadastralParcel.gfs" />
+    <None Include="output\gdal\data\inspire_cp_CadastralZoning.gfs" />
+    <None Include="output\gdal\data\jpfgdgml_AdmArea.gfs" />
+    <None Include="output\gdal\data\jpfgdgml_AdmBdry.gfs" />
+    <None Include="output\gdal\data\jpfgdgml_AdmPt.gfs" />
+    <None Include="output\gdal\data\jpfgdgml_BldA.gfs" />
+    <None Include="output\gdal\data\jpfgdgml_BldL.gfs" />
+    <None Include="output\gdal\data\jpfgdgml_Cntr.gfs" />
+    <None Include="output\gdal\data\jpfgdgml_CommBdry.gfs" />
+    <None Include="output\gdal\data\jpfgdgml_CommPt.gfs" />
+    <None Include="output\gdal\data\jpfgdgml_Cstline.gfs" />
+    <None Include="output\gdal\data\jpfgdgml_ElevPt.gfs" />
+    <None Include="output\gdal\data\jpfgdgml_GCP.gfs" />
+    <None Include="output\gdal\data\jpfgdgml_LeveeEdge.gfs" />
+    <None Include="output\gdal\data\jpfgdgml_RailCL.gfs" />
+    <None Include="output\gdal\data\jpfgdgml_RdArea.gfs" />
+    <None Include="output\gdal\data\jpfgdgml_RdASL.gfs" />
+    <None Include="output\gdal\data\jpfgdgml_RdCompt.gfs" />
+    <None Include="output\gdal\data\jpfgdgml_RdEdg.gfs" />
+    <None Include="output\gdal\data\jpfgdgml_RdMgtBdry.gfs" />
+    <None Include="output\gdal\data\jpfgdgml_RdSgmtA.gfs" />
+    <None Include="output\gdal\data\jpfgdgml_RvrMgtBdry.gfs" />
+    <None Include="output\gdal\data\jpfgdgml_SBAPt.gfs" />
+    <None Include="output\gdal\data\jpfgdgml_SBArea.gfs" />
+    <None Include="output\gdal\data\jpfgdgml_SBBdry.gfs" />
+    <None Include="output\gdal\data\jpfgdgml_WA.gfs" />
+    <None Include="output\gdal\data\jpfgdgml_WL.gfs" />
+    <None Include="output\gdal\data\jpfgdgml_WStrA.gfs" />
+    <None Include="output\gdal\data\jpfgdgml_WStrL.gfs" />
+    <None Include="output\gdal\data\netcdf_config.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="output\gdal\data\nitf_spec.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="output\gdal\data\ogrvrt.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="output\gdal\data\osmconf.ini" />
+    <None Include="output\gdal\data\ozi_datum.csv" />
+    <None Include="output\gdal\data\ozi_ellips.csv" />
+    <None Include="output\gdal\data\pdfcomposition.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="output\gdal\data\plscenesconf.json" />
+    <None Include="output\gdal\data\ruian_vf_ob_v1.gfs" />
+    <None Include="output\gdal\data\ruian_vf_st_uvoh_v1.gfs" />
+    <None Include="output\gdal\data\ruian_vf_st_v1.gfs" />
+    <None Include="output\gdal\data\ruian_vf_v1.gfs" />
+    <None Include="output\gdal\data\s57agencies.csv" />
+    <None Include="output\gdal\data\s57attributes.csv" />
+    <None Include="output\gdal\data\s57expectedinput.csv" />
+    <None Include="output\gdal\data\s57objectclasses.csv" />
+    <None Include="output\gdal\data\seed_2d.dgn" />
+    <None Include="output\gdal\data\seed_3d.dgn" />
+    <None Include="output\gdal\data\stateplane.csv" />
+    <None Include="output\gdal\data\template_tiles.mapml" />
+    <None Include="output\gdal\data\tms_LINZAntarticaMapTileGrid.json" />
+    <None Include="output\gdal\data\tms_MapML_APSTILE.json" />
+    <None Include="output\gdal\data\tms_MapML_CBMTILE.json" />
+    <None Include="output\gdal\data\tms_NZTM2000.json" />
+    <None Include="output\gdal\data\trailer.dxf" />
+    <None Include="output\gdal\data\vdv452.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="output\gdal\data\vicar.json" />
+    <None Include="output\gdal\GDALLicense.rtf" />
+    <None Include="output\gdal\GISInternalsLicense.rtf" />
+    <None Include="output\gdal\share\CH" />
+    <None Include="output\gdal\share\deformation_model.schema.json" />
+    <None Include="output\gdal\share\GL27" />
+    <None Include="output\gdal\share\ITRF2000" />
+    <None Include="output\gdal\share\ITRF2008" />
+    <None Include="output\gdal\share\ITRF2014" />
+    <None Include="output\gdal\share\nad27" />
+    <None Include="output\gdal\share\nad83" />
+    <None Include="output\gdal\share\other.extra" />
+    <None Include="output\gdal\share\proj.db" />
+    <None Include="output\gdal\share\proj.ini" />
+    <None Include="output\gdal\share\projjson.schema.json" />
+    <None Include="output\gdal\share\triangulation.schema.json" />
+    <None Include="output\gdal\share\world" />
+    <None Include="output\gdal\x64\curl-ca-bundle.crt" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="output\gdal\data\nitf_spec.xml" />
+    <None Include="output\gdal\data\pci_datum.txt" />
+    <None Include="output\gdal\data\pci_ellips.txt" />
+    <None Include="output\gdal\license.txt" />
+    <None Include="output\gdal\share\nad.lst" />
+    <None Include="output\gdal\x64\cairo.dll" />
+    <None Include="output\gdal\x64\cfitsio.dll" />
+    <None Include="output\gdal\x64\freexl.dll" />
+    <None Include="output\gdal\x64\gdalconst_wrap.dll" />
+    <None Include="output\gdal\x64\gdal_wrap.dll" />
+    <None Include="output\gdal\x64\geos.dll" />
+    <None Include="output\gdal\x64\geos_c.dll" />
+    <None Include="output\gdal\x64\hdf5.dll" />
+    <None Include="output\gdal\x64\hdf5_hl.dll" />
+    <None Include="output\gdal\x64\libcurl.dll" />
+    <None Include="output\gdal\x64\libfcgi.dll" />
+    <None Include="output\gdal\x64\libmysql.dll" />
+    <None Include="output\gdal\x64\libpq.dll" />
+    <None Include="output\gdal\x64\libxml2.dll" />
+    <None Include="output\gdal\x64\mapscript.dll" />
+    <None Include="output\gdal\x64\mapserver.dll" />
+    <None Include="output\gdal\x64\NCSEcw.dll" />
+    <None Include="output\gdal\x64\netcdf.dll" />
+    <None Include="output\gdal\x64\ogr_wrap.dll" />
+    <None Include="output\gdal\x64\openjp2.dll" />
+    <None Include="output\gdal\x64\osr_wrap.dll" />
+    <None Include="output\gdal\x64\spatialite.dll" />
+    <None Include="output\gdal\x64\sqlite3.dll" />
+    <None Include="output\gdal\x64\szip.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="output\gdal\data\gdalicon.png" />
+    <None Include="output\gdal\data\GDALLogoBW.svg" />
+    <None Include="output\gdal\data\GDALLogoColor.svg" />
+    <None Include="output\gdal\data\GDALLogoGS.svg" />
+    <None Include="output\gdal\data\vdv452.xml" />
+    <None Include="output\gdal\x64\plugins\ogr_MSSQLSpatial.dll" />
+    <None Include="output\gdal\x64\plugins\ogr_PG.dll" />
+    <None Include="output\gdal\x64\hdf5_cpp.dll" />
+    <None Include="output\gdal\x64\hdf5_hl_cpp.dll" />
+    <None Include="output\gdal\x64\libkea.dll" />
+    <None Include="output\gdal\x64\plugins\gdal_ECW_JP2ECW.dll" />
+    <None Include="output\gdal\x64\plugins\gdal_MrSID.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="output\gdal\data\gmlasconf.xml" />
+    <None Include="output\gdal\data\pds4_template.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="output\gdal\x64\msplugin_mssql2008.dll" />
+    <None Include="output\gdal\x64\msplugin_oracle.dll" />
+    <None Include="output\gdal\x64\msvcp140.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="output\gdal\data\gml_registry.xml" />
+    <Content Include="output\gdal\x64\adrg.dll" />
+    <Content Include="output\gdal\x64\apr_dbd_odbc-1.dll" />
+    <Content Include="output\gdal\x64\apr_ldap-1.dll" />
+    <Content Include="output\gdal\x64\concrt140.dll" />
+    <Content Include="output\gdal\x64\csharpmapscript.dll" />
+    <Content Include="output\gdal\x64\curl.exe" />
+    <Content Include="output\gdal\x64\FileGDBAPI.dll" />
+    <Content Include="output\gdal\x64\fribidi-0.dll" />
+    <Content Include="output\gdal\x64\fts5.dll" />
+    <Content Include="output\gdal\x64\gdal304.dll" />
+    <Content Include="output\gdal\x64\hdf.dll" />
+    <Content Include="output\gdal\x64\iconv-2.dll" />
+    <Content Include="output\gdal\x64\lemon.exe" />
+    <Content Include="output\gdal\x64\libapr-1.dll" />
+    <Content Include="output\gdal\x64\libaprutil-1.dll" />
+    <Content Include="output\gdal\x64\libcrypto-1_1-x64.dll" />
+    <Content Include="output\gdal\x64\libexpat.dll" />
+    <Content Include="output\gdal\x64\libhttpd.dll" />
+    <Content Include="output\gdal\x64\libpng16.dll" />
+    <Content Include="output\gdal\x64\librttopo.dll" />
+    <Content Include="output\gdal\x64\libssl-1_1-x64.dll" />
+    <Content Include="output\gdal\x64\mapcache.dll" />
+    <Content Include="output\gdal\x64\mapserv.exe" />
+    <Content Include="output\gdal\x64\mfhdf.dll" />
+    <Content Include="output\gdal\x64\mkkeywordhash.exe" />
+    <Content Include="output\gdal\x64\mksourceid.exe" />
+    <Content Include="output\gdal\x64\mod_mapcache.dll" />
+    <Content Include="output\gdal\x64\msvcp140_1.dll" />
+    <Content Include="output\gdal\x64\msvcp140_2.dll" />
+    <Content Include="output\gdal\x64\msvcp140_atomic_wait.dll" />
+    <Content Include="output\gdal\x64\msvcp140_codecvt_ids.dll" />
+    <Content Include="output\gdal\x64\ogdi.dll" />
+    <Content Include="output\gdal\x64\openssl.exe" />
+    <Content Include="output\gdal\x64\opj_compress.exe" />
+    <Content Include="output\gdal\x64\opj_decompress.exe" />
+    <Content Include="output\gdal\x64\opj_dump.exe" />
+    <Content Include="output\gdal\x64\pcre.dll" />
+    <Content Include="output\gdal\x64\pcrecpp.dll" />
+    <Content Include="output\gdal\x64\pcreposix.dll" />
+    <Content Include="output\gdal\x64\proj.dll" />
+    <Content Include="output\gdal\x64\proj_4_9.dll" />
+    <Content Include="output\gdal\x64\proj_7_2.dll" />
+    <Content Include="output\gdal\x64\remote.dll" />
+    <Content Include="output\gdal\x64\rpf.dll" />
+    <Content Include="output\gdal\x64\skeleton.dll" />
+    <Content Include="output\gdal\x64\vcruntime140_1.dll" />
+    <Content Include="output\gdal\x64\vrf.dll" />
+    <Content Include="output\gdal\x64\xdr.dll" />
+    <Content Include="output\gdal\x64\xerces-c_3_2.dll" />
+    <Content Include="output\gdal\data\bag_template.xml" />
+    <Content Include="output\gdal\x64\plugins\ogr_FileGDB.dll" />
+    <Content Include="output\gdal\x64\protoc-gen-c.exe" />
+    <Content Include="output\gdal\x64\protoc.exe" />
+    <Content Include="output\gdal\x64\sqlite3.exe" />
+    <Content Include="output\gdal\x64\tiff.dll" />
+    <Content Include="output\gdal\x64\tiffxx.dll" />
+    <Content Include="output\gdal\x64\vcruntime140.dll" />
+    <Content Include="output\gdal\x64\zlib.dll" />
+    <Content Include="output\gdal\x64\zstd.dll" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!--<Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>-->
+</Project>

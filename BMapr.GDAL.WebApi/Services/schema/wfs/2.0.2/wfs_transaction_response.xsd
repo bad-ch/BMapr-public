@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+   targetNamespace="http://www.opengis.net/wfs/2.0" xmlns:wfs="http://www.opengis.net/wfs/2.0"
+   xmlns:fes="http://www.opengis.net/fes/2.0" xmlns:ows="http://www.opengis.net/ows/1.1"
+   xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xml="http://www.w3.org/XML/1998/namespace"
+   elementFormDefault="qualified" version="2.0.2">
+   <!-- ==============================================================
+        Includes and Imports
+        ============================================================== -->
+   <xsd:import namespace="http://www.w3.org/XML/1998/namespace"
+      schemaLocation="http://www.w3.org/2001/xml.xsd"/>
+   <xsd:import namespace="http://www.w3.org/1999/xlink"
+      schemaLocation="http://www.w3.org/1999/xlink.xsd"/>
+   <xsd:import namespace="http://www.opengis.net/ows/1.1"
+      schemaLocation="http://schemas.opengis.net/ows/1.1.0/owsAll.xsd"/>
+   <xsd:import namespace="http://www.opengis.net/fes/2.0"
+      schemaLocation="http://schemas.opengis.net/filter/2.0/filterAll.xsd"/>
+
+   <xsd:element name="TransactionResponse" type="wfs:TransactionResponseType"
+      xmlns:xsd="http://www.w3.org/2001/XMLSchema"/>
+   <xsd:complexType name="TransactionSummaryType" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+      <xsd:sequence>
+         <xsd:element name="totalInserted" type="xsd:nonNegativeInteger" minOccurs="0"/>
+         <xsd:element name="totalUpdated" type="xsd:nonNegativeInteger" minOccurs="0"/>
+         <xsd:element name="totalReplaced" type="xsd:nonNegativeInteger" minOccurs="0"/>
+         <xsd:element name="totalDeleted" type="xsd:nonNegativeInteger" minOccurs="0"/>
+      </xsd:sequence>
+   </xsd:complexType>
+   <xsd:complexType name="ActionResultsType" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+      <xsd:sequence>
+         <xsd:element name="Feature" type="wfs:CreatedOrModifiedFeatureType" maxOccurs="unbounded"/>
+      </xsd:sequence>
+   </xsd:complexType>
+   <xsd:simpleType name="VersionStringType" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+      <xsd:restriction base="xsd:string">
+         <xsd:pattern value="2\.0\.\d+"/>
+      </xsd:restriction>
+   </xsd:simpleType>
+   <xsd:complexType name="CreatedOrModifiedFeatureType" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+      <xsd:sequence maxOccurs="unbounded">
+         <xsd:element ref="fes:ResourceId"/>
+      </xsd:sequence>
+      <xsd:attribute name="handle" type="xsd:string"/>
+   </xsd:complexType>
+   <xsd:complexType name="TransactionResponseType" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+      <xsd:sequence>
+         <xsd:element name="TransactionSummary" type="wfs:TransactionSummaryType"/>
+         <xsd:element name="InsertResults" type="wfs:ActionResultsType" minOccurs="0"/>
+         <xsd:element name="UpdateResults" type="wfs:ActionResultsType" minOccurs="0"/>
+         <xsd:element name="ReplaceResults" type="wfs:ActionResultsType" minOccurs="0"/>
+      </xsd:sequence>
+      <xsd:attribute name="version" type="wfs:VersionStringType" use="required"/>
+   </xsd:complexType>
+</xsd:schema>

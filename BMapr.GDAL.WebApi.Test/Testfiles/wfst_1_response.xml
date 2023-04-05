@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wfs:TransactionResponse version="1.1.0" xmlns:wfs="http://www.opengis.net/wfs"
+    xmlns:gml="http://www.opengis.net/gml" xmlns:ogc="http://www.opengis.net/ogc">
+    <wfs:TransactionSummary>
+        <wfs:totalInserted>3</wfs:totalInserted>
+    </wfs:TransactionSummary>
+    <wfs:InsertResults>
+        <wfs:Feature>
+            <ogc:FeatureId fid="Polygons.1031"/>
+        </wfs:Feature>
+        <wfs:Feature>
+            <ogc:FeatureId fid="Polygons.1032"/>
+        </wfs:Feature>
+        <wfs:Feature>
+            <ogc:FeatureId fid="Polygons.1033"/>
+        </wfs:Feature>
+    </wfs:InsertResults>
+</wfs:TransactionResponse>

@@ -1,0 +1,127 @@
+MAP
+  NAME "WFS_server"
+  STATUS ON
+  SIZE 1600 1200
+  SYMBOLSET "symbols.sym"
+  EXTENT -64789 241896 -40754 256245
+  UNITS METERS
+  SHAPEPATH ""
+  IMAGECOLOR 255 255 255
+  FONTSET "font.list"
+  CONFIG "PROJ_LIB" "proj"
+  DEBUG 5
+  #CONFIG "MS_ERRORFILE" "wfs.log"
+
+	
+  OUTPUTFORMAT
+    NAME "png24"
+    MIMETYPE "image/png"
+    DRIVER "AGG/PNG"
+    EXTENSION "png"
+    IMAGEMODE RGB
+    TRANSPARENT FALSE
+  END # OUTPUTFORMAT
+
+  OUTPUTFORMAT
+    NAME "print"
+    MIMETYPE "image/png"
+    DRIVER "AGG/PNG"
+    EXTENSION "png"
+    IMAGEMODE RGB
+    TRANSPARENT FALSE
+  END # OUTPUTFORMAT
+
+  OUTPUTFORMAT
+      NAME "CSV"
+      DRIVER "OGR/CSV"
+      MIMETYPE "text/csv"
+      FORMATOPTION "LCO:GEOMETRY=AS_WKT"
+      FORMATOPTION "STORAGE=memory"
+      FORMATOPTION "FORM=simple"
+      FORMATOPTION "FILENAME=result.csv"
+    END
+
+    OUTPUTFORMAT
+      NAME "OGRGML"
+      DRIVER "OGR/GML"
+      FORMATOPTION "STORAGE=filesystem"
+      FORMATOPTION "FORM=multipart"
+      FORMATOPTION "FILENAME=result.gml"
+    END
+
+    OUTPUTFORMAT
+      NAME "SHAPEZIP"
+      DRIVER "OGR/ESRI Shapefile"
+      FORMATOPTION "STORAGE=memory"
+      FORMATOPTION "FORM=zip"
+      FORMATOPTION "FILENAME=result.zip"
+    END
+
+    OUTPUTFORMAT
+      NAME "application/json"
+      DRIVER "OGR/GEOJSON"
+      MIMETYPE "application/json"
+      FORMATOPTION "FORM=SIMPLE"
+      FORMATOPTION "STORAGE=memory"
+    END
+
+  #
+  # Start of web interface definition
+  #
+  WEB
+    #IMAGEPATH "/ms4w/tmp/ms_tmp/"
+    #IMAGEURL "/ms_tmp/"
+    METADATA
+      "wfs_title"          "WFS Demo Server for MapServer" ## REQUIRED
+      "wfs_onlineresource" "https://localhost:7090/api/Ogc/Interface?" ## Recommended
+      "wfs_srs"            "EPSG:31255 EPSG:3857" ## Recommended
+      "wfs_abstract"       "This text describes my WFS service." ## Recommended
+      "wfs_enable_request" "*"  # necessary
+
+    "wms_title"           "WMS Demo Server for MapServer"
+    "wms_onlineresource"  "https://localhost:7090/api/Ogc/Interface?"
+    "wms_srs"             "EPSG:31255 EPSG:3857"
+    WMS_ENABLE_REQUEST "*"
+    END
+  END
+
+  PROJECTION
+    "init=epsg:31255"
+  END
+
+  #
+  # Start of layer definitions
+  #
+
+  ##################
+  # World Continents
+  ##################
+  LAYER
+    NAME "Slopes"
+    METADATA
+      "wms_title"         "slopes"   ##required  
+      "wfs_title"         "Slopes" ##REQUIRED
+      "wfs_srs"           "EPSG:31255" ## REQUIRED
+      "gml_include_items" "all" ## Optional (serves all attributes for layer)
+      "gml_featureid"     "P_ID" ## REQUIRED
+      "gml_types"         "auto" ## Optional (automatically populate the type for the attributes)
+      "wfs_enable_request" "*"
+      "wfs_use_default_extent_for_getfeature" "false" ## Optional (improves performance of OGR layers)
+    END
+    TYPE POLYGON
+    STATUS ON
+    DATA "test3.shp"
+    # define source projection
+    PROJECTION
+      "init=epsg:31255"
+    END
+    CLASS
+      NAME "Slopes"
+      STYLE
+        COLOR 255 128 128
+        OUTLINECOLOR 96 96 96
+      END
+    END
+  END #layer
+
+END #mapfile

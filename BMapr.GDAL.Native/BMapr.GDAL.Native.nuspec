@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+		<metadata>
+		<id>BMapr.GDAL.Native</id>
+		<version>3.5.2</version>
+		<title>BMapr.GDAL.Native</title>
+        <authors>BMapr AG</authors>
+        <owners>BMapr AG</owners>
+        <licenseUrl>http://trac.osgeo.org/gdal/wiki/FAQGeneral#WhatlicensedoesGDALOGRuse</licenseUrl>
+        <projectUrl>http://www.gdal.org/</projectUrl>
+        <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <description>GDAL is a translator library for raster geospatial data formats that is released under Open Source license by the Open Source Geospatial Foundation. As a library, it presents a single abstract data model to the calling application for all supported formats.</description>
+        <dependencies>
+			<dependency id="Baseclass.Contrib.Nuget.Output" />
+		</dependencies>
+		<tags>GDAL OGR Geospatial</tags>
+    </metadata>
+	<files>
+    <file src="output\**" target="output\" />
+  </files>
+</package>

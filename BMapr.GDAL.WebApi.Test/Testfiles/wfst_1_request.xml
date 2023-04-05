@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Transaction xmlns="http://www.opengis.net/wfs" service="WFS" version="1.1.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.opengis.net/wfs http://schemas.opengis.net/wfs/1.1.0/wfs.xsd">
+    <Insert>
+        <Polygons xmlns="http://www.intergraph.com/geomedia/gml">
+            <Label>Test</Label>
+            <Geometry>
+                <Polygon xmlns="http://www.opengis.net/gml" srsName="EPSG:2056">
+                    <exterior>
+                        <LinearRing srsName="EPSG:2056">
+                            <posList srsDimension="2">2684276.7119096476 1242787.8695365004
+                                2684618.202411314 1242861.6316921557 2684776.6536193765
+                                1242574.7798761842 2684795.7770893374 1242326.1747666935
+                                2684637.3258812744 1242230.5574168894 2684202.9497539927
+                                1242503.7494447168 2684276.7119096476 1242787.8695365004</posList>
+                        </LinearRing>
+                    </exterior>
+                </Polygon>
+            </Geometry>
+        </Polygons>
+    </Insert>
+    <Insert>
+        <Polygons xmlns="http://www.intergraph.com/geomedia/gml">
+            <Label>test 2</Label>
+            <Geometry>
+                <Polygon xmlns="http://www.opengis.net/gml" srsName="EPSG:2056">
+                    <exterior>
+                        <LinearRing srsName="EPSG:2056">
+                            <posList srsDimension="2">2684836.7562203286 1243044.6707523183
+                                2685309.379520973 1243093.8452893144 2685385.873400816
+                                1242771.4780241684 2685317.574693537 1242678.5930988747
+                                2684834.0240292586 1242796.0656428277 2684836.7562203286
+                                1243044.6707523183</posList>
+                        </LinearRing>
+                    </exterior>
+                </Polygon>
+            </Geometry>
+        </Polygons>
+    </Insert>
+    <Insert>
+        <Polygons xmlns="http://www.intergraph.com/geomedia/gml">
+            <Label>Test 3</Label>
+            <Geometry>
+                <Polygon xmlns="http://www.opengis.net/gml" srsName="EPSG:2056">
+                    <exterior>
+                        <LinearRing srsName="EPSG:2056">
+                            <posList srsDimension="2">2684866.8075208045 1242629.4183284377
+                                2685279.3277536156 1242569.3157274858 2685399.5329555194
+                                1242268.8043568109 2685361.2860155976 1242025.6626956963
+                                2685068.9700509277 1241960.096879809 2684910.517909102
+                                1242233.2889076364 2684866.8075208045 1242629.4183284377</posList>
+                        </LinearRing>
+                    </exterior>
+                </Polygon>
+            </Geometry>
+        </Polygons>
+    </Insert>
+</Transaction>

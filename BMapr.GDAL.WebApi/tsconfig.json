@@ -1,0 +1,22 @@
+{
+  "compileOnSave": true,
+  "compilerOptions": {
+    "noImplicitAny": false,
+    "noEmitOnError": true,
+    "removeComments": false,
+    "sourceMap": true,
+    "target": "ES2018",
+    "outDir": "wwwroot/js",
+    //"module": "commonjs",
+    "esModuleInterop": false,
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports":  true
+  },
+  "include": [
+    "scripts/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "wwwroot"
+  ]
+}

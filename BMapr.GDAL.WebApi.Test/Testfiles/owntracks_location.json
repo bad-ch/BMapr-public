@@ -1,0 +1,17 @@
+{
+    "_type": "location",
+    "acc": 11,
+    "alt": 378,
+    "batt": 98,
+    "bs": 1,
+    "conn": "m",
+    "created_at": 1656883230,
+    "lat": 47.5312854,
+    "lon": 7.9945401,
+    "m": 2,
+    "tid": "0",
+    "topic": "owntracks/webadmin/device1",
+    "tst": 1656883229,
+    "vac": 0,
+    "vel": 3
+}

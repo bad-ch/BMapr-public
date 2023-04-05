@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Map name="xmlmapfile" xmlns="http://www.mapserver.org/mapserver" status="ON"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mapserver.org/mapserver mapfile.xsd" version="5.6.0">
+	<Config>
+		<item name="PROJ_LIB">../../share/proj</item>
+		<item name="MS_ERRORFILE">ms_error.txt</item>
+	</Config>
+	<debug>5</debug>
+	<extent>2582739 1108919 2828726 1317743</extent>
+	<fontSet>../../share/font.list</fontSet>
+	<imageColor red="255" green="255" blue="255"/>
+	<imageType>png</imageType>
+	<Layer name="sections" type="POLYGON" status="ON">
+		<Class name="Section style" status="ON">
+			<Style>
+				<color red="255" green="128" blue="128"/>
+				<outlineColor red="96" green="96" blue="96"/>
+			</Style>
+		</Class>
+		<connection></connection>
+		<connectionType>LOCAL</connectionType>
+		<data>bb.shp</data>
+		<Metadata>
+			<item name="wfs_title">sections</item>
+			<item name="wfs_srs">EPSG:2056</item>
+			<item name="wfs_enable_request">*</item>
+			<item name="wfs_use_default_extent_for_getfeature">false</item>
+			<item name="gml_include_items">all</item>
+			<item name="gml_featureid">ID</item>
+			<item name="gml_types">auto</item>
+			<item name="wms_title">sections</item>
+		</Metadata>
+		<projection>init=epsg:2056</projection>
+	</Layer>
+	<maxSize>2048</maxSize>
+	<OutputFormat name="GTiff">
+		<driver>GDAL/GTIFF</driver>
+		<extension>tiff</extension>
+		<formatOption>TILED=YES</formatOption>
+		<formatOption>TRANSPARENCY=TRUE</formatOption>
+		<imageMode>FLOAT32</imageMode>
+		<mimeType>image/tiff</mimeType>
+		<transparent>OFF</transparent>
+	</OutputFormat>
+	<OutputFormat name="PNG">
+		<driver>AGG/PNG</driver>
+		<extension>png</extension>
+		<formatOption>TILED=YES</formatOption>
+		<imageMode>RGBA</imageMode>
+		<mimeType>image/png</mimeType>
+		<transparent>ON</transparent>
+	</OutputFormat>
+	<projection>init=epsg:2056</projection>
+	<shapePath></shapePath>
+	<size x="1400" y="1300"/>
+	<symbolSet>../../share/symbols.sym</symbolSet>
+	<units>METERS</units>
+	<Web>
+		<Metadata>
+			<item name="wfs_title">WFS Demo Server for MapServer</item>
+			<item name="wfs_onlineresource">https://ogc.dev.local/api/Ogc/e5a071f2-ffce-4d18-9f67-dfd8052cd7c9?</item>
+			<item name="wfs_srs">EPSG:2056 EPSG:4326 EPSG:3857</item>
+			<item name="wfs_abstract">This text describes my WFS service.</item>
+			<item name="wfs_enable_request">*</item>
+			<item name="wms_title">WMS Demo Server for MapServer</item>
+			<item name="wms_onlineresource">https://ogc.dev.local/api/Ogc/e5a071f2-ffce-4d18-9f67-dfd8052cd7c9?</item>
+			<item name="wms_srs">EPSG:2056 EPSG:4326 EPSG:3857</item>
+			<item name="wms_enable_request">*</item>
+		</Metadata>
+	</Web>
+</Map>

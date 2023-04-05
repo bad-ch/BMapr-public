@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wfs:TransactionResponse version="1.1.0"
+    xsi:schemaLocation="http://www.opengis.net/wfs http://boyang.cs.uwm.edu:8080/geoserver/schemas/wfs/1.1.0/wfs.xsd"
+    xmlns:sch="http://nces.ed.gov/" xmlns:ogc="http://www.opengis.net/ogc"
+    xmlns:wdot="http://uwm.edu" xmlns:ct="http://boyang.cs.uwm.edu"
+    xmlns:tiger="http://www.census.gov" xmlns:wks="http://boyang.cs.uwm.edu/wks"
+    xmlns:wfs="http://www.opengis.net/wfs" xmlns:nh="http://boyang.cs.uwm.edu:8080/newHaven"
+    xmlns:topp="http://www.openplans.org/topp" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:sf="http://www.openplans.org/spearfish" xmlns:ows="http://www.opengis.net/ows"
+    xmlns:gml="http://www.opengis.net/gml" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <wfs:TransactionSummary>
+        <wfs:totalInserted>0</wfs:totalInserted>
+        <wfs:totalUpdated>0</wfs:totalUpdated>
+        <wfs:totalDeleted>1</wfs:totalDeleted>
+    </wfs:TransactionSummary>
+    <wfs:TransactionResults/>
+    <wfs:InsertResults>
+        <wfs:Feature>
+            <ogc:FeatureId fid="none"/>
+        </wfs:Feature>
+    </wfs:InsertResults>
+</wfs:TransactionResponse>
