@@ -70,7 +70,13 @@ namespace BMapr.GDAL.WebApi.Controllers
                         Culture = CultureInfo.CurrentCulture.Name,
                         CreationDate = versionData?.CreationDate,
                         CreationTime = versionData?.CreationTime,
-                        TempPath = Path.GetTempPath(),
+                        Path = new {
+                            Temp = Path.GetTempPath(),
+                            Data = Config.Data?.FullName,
+                            Assembly = Config.AssemblyPath?.FullName,
+                            ApplicationRoot = Config.ApplicationRoot?.FullName,
+                            Projects = Config.DataProjects?.FullName,
+                        },
                         WebApplication = Request.PathBase,
                     },
                     Gdal = new

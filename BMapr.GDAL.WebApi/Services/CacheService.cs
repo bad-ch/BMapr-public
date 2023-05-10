@@ -31,7 +31,7 @@ namespace BMapr.GDAL.WebApi.Services
                 {
                     case "getcapabilities":
                         return mapConfig.CacheWmsGetCapabilities;
-                    case "getfeature":
+                    case "getmap":
                         return mapConfig.CacheWmsGetMap;
                     default:
                         return false;
