@@ -1,0 +1,293 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+  <xs:element name="Capabilities">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="ServiceIdentification"/>
+        <xs:element ref="ServiceProvider"/>
+        <xs:element ref="OperationsMetadata"/>
+        <xs:element ref="Contents"/>
+        <xs:element ref="Themes"/>
+        <xs:element ref="ServiceMetadataURL"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="ServiceIdentification">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="Title"/>
+        <xs:element ref="Abstract"/>
+        <xs:element ref="Keywords"/>
+        <xs:element ref="ServiceType"/>
+        <xs:element ref="ServiceTypeVersion"/>
+        <xs:element ref="Fees"/>
+        <xs:element ref="AccessConstraints"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="Keywords">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element maxOccurs="unbounded" ref="Keyword"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="Keyword" type="xs:string"/>
+  <xs:element name="ServiceType" type="xs:string"/>
+  <xs:element name="ServiceTypeVersion" type="xs:NMTOKEN"/>
+  <xs:element name="Fees" type="xs:string"/>
+  <xs:element name="AccessConstraints" type="xs:string"/>
+  <xs:element name="ServiceProvider">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="ProviderName"/>
+        <xs:element ref="ProviderSite"/>
+        <xs:element ref="ServiceContact"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="ProviderName" type="xs:string"/>
+  <xs:element name="ProviderSite">
+    <xs:complexType>
+      <xs:attribute name="href" use="required" type="xs:anyURI"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="ServiceContact">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="IndividualName"/>
+        <xs:element ref="PositionName"/>
+        <xs:element ref="ContactInfo"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="IndividualName" type="xs:string"/>
+  <xs:element name="PositionName">
+    <xs:complexType/>
+  </xs:element>
+  <xs:element name="ContactInfo">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="Phone"/>
+        <xs:element ref="Address"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="Phone">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="Voice"/>
+        <xs:element ref="Facsimile"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="Voice" type="xs:string"/>
+  <xs:element name="Facsimile" type="xs:string"/>
+  <xs:element name="Address">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="DeliveryPoint"/>
+        <xs:element ref="City"/>
+        <xs:element ref="AdministrativeArea"/>
+        <xs:element ref="PostalCode"/>
+        <xs:element ref="Country"/>
+        <xs:element ref="ElectronicMailAddress"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="DeliveryPoint" type="xs:NCName"/>
+  <xs:element name="City" type="xs:NCName"/>
+  <xs:element name="AdministrativeArea" type="xs:NCName"/>
+  <xs:element name="PostalCode" type="xs:integer"/>
+  <xs:element name="Country" type="xs:NCName"/>
+  <xs:element name="ElectronicMailAddress" type="xs:string"/>
+  <xs:element name="OperationsMetadata">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element maxOccurs="unbounded" ref="Operation"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="Operation">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="DCP"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="DCP">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="HTTP"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="HTTP">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="Get"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="Get">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="Constraint"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="Constraint">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="AllowedValues"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="AllowedValues">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="Value"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="Contents">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element maxOccurs="unbounded" ref="Layer"/>
+        <xs:element maxOccurs="unbounded" ref="TileMatrixSet"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="Layer">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="Title"/>
+        <xs:element ref="Abstract"/>
+        <xs:element ref="WGS84BoundingBox"/>
+        <xs:element ref="Identifier"/>
+        <xs:element ref="Metadata"/>
+        <xs:element ref="Style"/>
+        <xs:element ref="Format"/>
+        <xs:element ref="Dimension"/>
+        <xs:element ref="TileMatrixSetLink"/>
+        <xs:element ref="ResourceURL"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="WGS84BoundingBox">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="LowerCorner"/>
+        <xs:element ref="UpperCorner"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="LowerCorner" type="xs:string"/>
+  <xs:element name="UpperCorner" type="xs:string"/>
+  <xs:element name="Metadata">
+    <xs:complexType>
+      <xs:attribute name="href" use="required" type="xs:anyURI"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="Style">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="Title"/>
+        <xs:element ref="Identifier"/>
+        <xs:element minOccurs="0" ref="LegendURL"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="LegendURL">
+    <xs:complexType>
+      <xs:attribute name="format" use="required"/>
+      <xs:attribute name="href" use="required" type="xs:anyURI"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="Format" type="xs:string"/>
+  <xs:element name="Dimension">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="Identifier"/>
+        <xs:element ref="Default"/>
+        <xs:element minOccurs="0" ref="Current"/>
+        <xs:element maxOccurs="unbounded" ref="Value"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="Default" type="xs:NMTOKEN"/>
+  <xs:element name="Current" type="xs:boolean"/>
+  <xs:element name="TileMatrixSetLink">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="TileMatrixSet"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="ResourceURL">
+    <xs:complexType>
+      <xs:attribute name="format" use="required"/>
+      <xs:attribute name="resourceType" use="required" type="xs:NCName"/>
+      <xs:attribute name="template" use="required"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="Themes">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element maxOccurs="unbounded" ref="Theme"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="ServiceMetadataURL">
+    <xs:complexType>
+      <xs:attribute name="href" use="required" type="xs:anyURI"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="Title" type="xs:string"/>
+  <xs:element name="Abstract" type="xs:string"/>
+  <xs:element name="Value" type="xs:NMTOKEN"/>
+  <xs:element name="Identifier" type="xs:NMTOKEN"/>
+  <xs:element name="TileMatrixSet">
+    <xs:complexType mixed="true">
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element ref="Identifier"/>
+        <xs:element ref="SupportedCRS"/>
+        <xs:element ref="TileMatrix"/>
+      </xs:choice>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="SupportedCRS" type="xs:NMTOKEN"/>
+  <xs:element name="TileMatrix">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="Identifier"/>
+        <xs:element ref="ScaleDenominator"/>
+        <xs:element ref="TopLeftCorner"/>
+        <xs:element ref="TileWidth"/>
+        <xs:element ref="TileHeight"/>
+        <xs:element ref="MatrixWidth"/>
+        <xs:element ref="MatrixHeight"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="ScaleDenominator" type="xs:decimal"/>
+  <xs:element name="TopLeftCorner" type="xs:string"/>
+  <xs:element name="TileWidth" type="xs:integer"/>
+  <xs:element name="TileHeight" type="xs:integer"/>
+  <xs:element name="MatrixWidth" type="xs:integer"/>
+  <xs:element name="MatrixHeight" type="xs:integer"/>
+  <xs:element name="Theme">
+    <xs:complexType>
+      <xs:sequence minOccurs="0">
+        <xs:choice maxOccurs="unbounded">
+          <xs:element ref="Abstract"/>
+          <xs:element ref="Identifier"/>
+          <xs:element ref="Theme"/>
+          <xs:element ref="Title"/>
+        </xs:choice>
+        <xs:element maxOccurs="unbounded" ref="LayerRef"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="LayerRef" type="xs:NCName"/>
+</xs:schema>

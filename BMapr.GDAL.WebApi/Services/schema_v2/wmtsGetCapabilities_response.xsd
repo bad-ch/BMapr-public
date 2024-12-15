@@ -1,0 +1,886 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schema elementFormDefault="qualified" targetNamespace="http://www.opengis.net/wmts/1.0"
+    version="1.0.2" xml:lang="en" xmlns="http://www.w3.org/2001/XMLSchema"
+    xmlns:gml="http://www.opengis.net/gml" xmlns:ows="http://www.opengis.net/ows/1.1"
+    xmlns:wmts="http://www.opengis.net/wmts/1.0" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <annotation>
+        <appinfo>wmtsGetCapabilities_response</appinfo>
+        <documentation>    This XML Schema Document encodes the WMTS GetCapabilities    operations
+            response message.     WMTS is an OGC Standard.    Copyright (c) 2009,2010 Open
+            Geospatial Consortium.    To obtain additional rights of use, visit
+            http://www.opengeospatial.org/legal/.   </documentation>
+    </annotation>
+    <!-- *********************************************************************
+	             Includes and imports.
+          ********************************************************************* -->
+    <annotation>
+        <appinfo>wmts</appinfo>
+        <documentation xml:lang="en">    This XML Schema Document includes all WMTS schemas and
+            is useful for SOAP messages.        WMTS is an OGC Standard.    Copyright (c) 2009,2010
+            Open Geospatial Consortium.    To obtain additional rights of use, visit
+            http://www.opengeospatial.org/legal/.   </documentation>
+    </annotation>
+    <!-- ==============================================================
+		includes and imports
+	============================================================== -->
+    <annotation>
+        <appinfo>wmtsGetTile_request</appinfo>
+        <documentation xml:lang="en">    This XML Schema Document defines XML WMTS GetTile
+            request that can be used in SOAP encodings.        WMTS is an OGC Standard.    Copyright
+            (c) 2009,2010 Open Geospatial Consortium.    To obtain additional rights of use, visit
+            http://www.opengeospatial.org/legal/.   </documentation>
+    </annotation>
+    <!-- =============================================================
+		includes and imports
+	============================================================== -->
+    <import namespace="http://www.opengis.net/ows/1.1" schemaLocation="owsAll.xsd"/>
+    <!-- =============================================================
+		elements and types
+	============================================================== -->
+    <import namespace="http://www.opengis.net/gml" schemaLocation="gml.xsd"/>
+    <import namespace="http://www.w3.org/1999/xlink" schemaLocation="xlink.xsd"/>
+    <simpleType name="RequestServiceType">
+        <restriction base="string">
+            <enumeration value="WMTS"/>
+        </restriction>
+    </simpleType>
+    <simpleType name="VersionType">
+        <restriction base="string">
+            <enumeration value="1.0.0"/>
+        </restriction>
+    </simpleType>
+    <simpleType name="GetCapabilitiesValueType">
+        <restriction base="string">
+            <enumeration value="GetCapabilities"/>
+        </restriction>
+    </simpleType>
+    <simpleType name="GetTileValueType">
+        <restriction base="string">
+            <enumeration value="GetTile"/>
+        </restriction>
+    </simpleType>
+    <simpleType name="GetFeatureInfoValueType">
+        <restriction base="string">
+            <enumeration value="GetFeatureInfo"/>
+        </restriction>
+    </simpleType>
+    <simpleType name="SectionsType">
+        <annotation>
+            <documentation xml:lang="en">     XML encoded identifier comma separated list of a
+                standard      MIME type, possibly a parameterized MIME type.     </documentation>
+        </annotation>
+        <restriction base="string">
+            <annotation>
+                <documentation xml:lang="en">Comma separated list of available      ServiceMetadata
+                    root elements. </documentation>
+            </annotation>
+            <pattern
+                value="(ServiceIdentification|ServiceProvider|OperationsMetadata|Contents|Themes)(,(ServiceIdentification|ServiceProvider|OperationsMetadata|Contents|Themes))*"
+            />
+        </restriction>
+    </simpleType>
+    <simpleType name="AcceptedFormatsType">
+        <annotation>
+            <documentation xml:lang="en">Comma separated list of a standard MIME type,     possibly
+                a parameterized MIME type. </documentation>
+        </annotation>
+        <restriction base="string">
+            <pattern
+                value="((application|audio|image|text|video|message|multipart|model)/.+(;\s*.+=.+)*)(,(application|audio|image|text|video|message|multipart|model)/.+(;\s*.+=.+)*)"
+            />
+        </restriction>
+    </simpleType>
+    <annotation>
+        <appinfo>wmtsGetCapabilities_request</appinfo>
+        <documentation xml:lang="en">    This XML Schema Document defines the XML WMTS
+            GetCapabilites request that can be used in SOAP encodings.        WMTS is an OGC
+            Standard.    Copyright (c) 2009,2010 Open Geospatial Consortium.    To obtain additional
+            rights of use, visit http://www.opengeospatial.org/legal/.   </documentation>
+    </annotation>
+    <!-- =============================================================
+		includes and imports
+	============================================================== -->
+    <!-- =============================================================
+		elements and types
+	============================================================== -->
+    <element name="GetCapabilities">
+        <annotation>
+            <documentation xml:lang="en">WMTS GetCapabilities operation request.</documentation>
+        </annotation>
+        <complexType>
+            <complexContent>
+                <extension base="ows:GetCapabilitiesType">
+                    <attribute fixed="WMTS" name="service" type="ows:ServiceType" use="required"/>
+                </extension>
+            </complexContent>
+        </complexType>
+    </element>
+    <annotation>
+        <appinfo>wmtsGetTile_request</appinfo>
+        <documentation xml:lang="en">    This XML Schema Document encodes XML WMTS GetTile
+            request that can be used in SOAP encodings.        WMTS is an OGC Standard.    Copyright
+            (c) 2009,2010 Open Geospatial Consortium.        To obtain additional rights of use,
+            visit http://www.opengeospatial.org/legal/.   </documentation>
+    </annotation>
+    <!-- =============================================================
+		includes and imports
+	============================================================== -->
+    <!-- =============================================================
+		elements and types
+	============================================================== -->
+    <element name="GetTile">
+        <complexType>
+            <sequence>
+                <element form="qualified" name="Layer" type="string">
+                    <annotation>
+                        <documentation xml:lang="en">A layer identifier has to be
+                            referenced</documentation>
+                    </annotation>
+                </element>
+                <element form="qualified" name="Style" type="string">
+                    <annotation>
+                        <documentation xml:lang="en">A style identifier has to be
+                            referenced.</documentation>
+                    </annotation>
+                </element>
+                <element form="qualified" name="Format" type="ows:MimeType">
+                    <annotation>
+                        <documentation xml:lang="en">Output format of the tile</documentation>
+                    </annotation>
+                </element>
+                <element maxOccurs="unbounded" minOccurs="0" ref="wmts:DimensionNameValue">
+                    <annotation>
+                        <documentation xml:lang="en">Dimension name and value</documentation>
+                    </annotation>
+                </element>
+                <element form="qualified" name="TileMatrixSet" type="string">
+                    <annotation>
+                        <documentation xml:lang="en">A TileMatrixSet identifier has to be
+                            referenced</documentation>
+                    </annotation>
+                </element>
+                <element form="qualified" name="TileMatrix" type="string">
+                    <annotation>
+                        <documentation xml:lang="en">A TileMatrix identifier has to be
+                            referenced</documentation>
+                    </annotation>
+                </element>
+                <element form="qualified" name="TileRow" type="nonNegativeInteger">
+                    <annotation>
+                        <documentation xml:lang="en">Row index of tile matrix</documentation>
+                    </annotation>
+                </element>
+                <element form="qualified" name="TileCol" type="nonNegativeInteger">
+                    <annotation>
+                        <documentation xml:lang="en">Column index of tile matrix</documentation>
+                    </annotation>
+                </element>
+            </sequence>
+            <attribute fixed="WMTS" name="service" type="string" use="required"/>
+            <attribute fixed="1.0.0" name="version" type="string" use="required"/>
+        </complexType>
+    </element>
+    <element name="DimensionNameValue">
+        <complexType>
+            <simpleContent>
+                <extension base="string">
+                    <annotation>
+                        <documentation xml:lang="en">Dimension value</documentation>
+                    </annotation>
+                    <attribute name="name" type="string" use="required">
+                        <annotation>
+                            <documentation xml:lang="en">Dimension name</documentation>
+                        </annotation>
+                    </attribute>
+                </extension>
+            </simpleContent>
+        </complexType>
+    </element>
+    <annotation>
+        <appinfo>wmtsPayload_response</appinfo>
+        <documentation xml:lang="en">    This XML Schema Document initially was intended to encode
+            SOAP     response for a WMTS GetTile request but in the future it might be used     and
+            part of a WMTS service (or even in any OWS service) that needs a     binary encoding.
+            WMTS is an OGC Standard.    Copyright (c) 2009,2010 Open Geospatial Consortium.    To
+            obtain additional rights of use, visit http://www.opengeospatial.org/legal/.
+        </documentation>
+    </annotation>
+    <!-- =============================================================
+		includes and imports
+	============================================================== -->
+    <!-- =============================================================
+		elements and types
+	============================================================== -->
+    <element name="BinaryPayload">
+        <complexType>
+            <sequence>
+                <element form="qualified" name="Format" type="ows:MimeType">
+                    <annotation>
+                        <documentation xml:lang="en">        MIMEType format of the PayloadContent
+                            once base64 decodified.       </documentation>
+                    </annotation>
+                </element>
+                <element form="qualified" name="BinaryContent" type="base64Binary">
+                    <annotation>
+                        <documentation xml:lang="en">        Binary content encoded in base64. It
+                            could be useful to         enclose it in a CDATA element to avoid XML
+                            parsing.       </documentation>
+                    </annotation>
+                </element>
+            </sequence>
+        </complexType>
+    </element>
+    <element name="TextPayload">
+        <complexType>
+            <sequence>
+                <element form="qualified" name="Format" type="ows:MimeType">
+                    <annotation>
+                        <documentation xml:lang="en">MIMEType format of the
+                            TextContent</documentation>
+                    </annotation>
+                </element>
+                <element form="qualified" name="TextContent" type="string">
+                    <annotation>
+                        <documentation xml:lang="en">        Text string like HTML, XHTML, XML or
+                            TXT. HTML and TXT data has         to be enclosed in a CDATA element to
+                            avoid XML parsing.       </documentation>
+                    </annotation>
+                </element>
+            </sequence>
+        </complexType>
+    </element>
+    <annotation>
+        <appinfo>wmtsGetFeatureInfo_request</appinfo>
+        <documentation xml:lang="en">    This XML Schema Document defines XML WMTS    GetFeatureInfo
+            request that can be used in SOAP encodings.               WMTS is an OGC Standard.
+            Copyright (c) 2009,2010 Open Geospatial Consortium.        To obtain additional rights
+            of use, visit http://www.opengeospatial.org/legal/.   </documentation>
+    </annotation>
+    <!-- =============================================================
+		includes and imports
+	============================================================== -->
+    <!-- =============================================================
+		elements and types
+	============================================================== -->
+    <element name="GetFeatureInfo">
+        <complexType>
+            <sequence>
+                <element ref="wmts:GetTile">
+                    <annotation>
+                        <documentation xml:lang="en">The corresponding GetTile request
+                            parameters</documentation>
+                    </annotation>
+                </element>
+                <element form="qualified" name="J" type="nonNegativeInteger">
+                    <annotation>
+                        <documentation xml:lang="en">Row index of a pixel in the
+                            tile</documentation>
+                    </annotation>
+                </element>
+                <element form="qualified" name="I" type="nonNegativeInteger">
+                    <annotation>
+                        <documentation xml:lang="en">Column index of a pixel in the
+                            tile</documentation>
+                    </annotation>
+                </element>
+                <element form="qualified" name="InfoFormat" type="ows:MimeType">
+                    <annotation>
+                        <documentation xml:lang="en">Output MIME type format of the        retrieved
+                            information</documentation>
+                    </annotation>
+                </element>
+            </sequence>
+            <attribute fixed="WMTS" name="service" type="string" use="required"/>
+            <attribute fixed="1.0.0" name="version" type="string" use="required"/>
+        </complexType>
+    </element>
+    <annotation>
+        <appinfo>wmtsGetFeatureInfo_response</appinfo>
+        <documentation xml:lang="en">    This XML Schema Document was intended to encode SOAP
+            response for a WMTS GetFeatureInfo request but it can be used in other     encoding.
+            Since GetFeatureInfo response is completely open, it can not     be more specific.
+            WMTS is an OGC Standard.    Copyright (c) 2009,2010 Open Geospatial Consortium.    To
+            obtain additional rights of use, visit http://www.opengeospatial.org/legal/.
+        </documentation>
+    </annotation>
+    <!-- =============================================================
+		includes and imports
+	============================================================== -->
+    <!-- =============================================================
+		elements and types
+	============================================================== -->
+    <element name="FeatureInfoResponse">
+        <complexType>
+            <choice>
+                <element ref="gml:_FeatureCollection">
+                    <annotation>
+                        <documentation xml:lang="en">        This allows to define any
+                            FeatureCollection that is a substitutionGroup         of gml:_GML and
+                            use it here. A Geography Markup Language GML         Simple Features
+                            Profile level 0 response format is strongly         recommended as a
+                            FeatureInfo response.       </documentation>
+                    </annotation>
+                </element>
+                <element ref="wmts:TextPayload">
+                    <annotation>
+                        <documentation xml:lang="en">        This allows to include any text format
+                            that is not a gml:_FeatureCollection         like HTML, TXT, etc
+                        </documentation>
+                    </annotation>
+                </element>
+                <element ref="wmts:BinaryPayload">
+                    <annotation>
+                        <documentation xml:lang="en">        This allows to include any binary
+                            format. Binary formats are not         common response for a
+                            GeFeatureInfo requests but possible for         some imaginative
+                            implementations.       </documentation>
+                    </annotation>
+                </element>
+                <element form="qualified" name="AnyContent" type="anyType">
+                    <annotation>
+                        <documentation xml:lang="en">        This allows to include any XML content
+                            that it is not any of         the previous ones.       </documentation>
+                    </annotation>
+                </element>
+            </choice>
+        </complexType>
+    </element>
+    <!-- *********************************************************************
+	          The top-level Capabilities element.
+          ********************************************************************* -->
+    <element name="Capabilities">
+        <annotation>
+            <documentation>XML defines the WMTS GetCapabilities operation response.
+                ServiceMetadata document provides clients with service metadata about a specific
+                service    instance, including metadata about the tightly-coupled data served. If
+                the server    does not implement the updateSequence parameter, the server SHALL
+                always    return the complete Capabilities document, without the updateSequence
+                parameter.    When the server implements the updateSequence parameter and the
+                GetCapabilities operation request included the updateSequence parameter    with the
+                current value, the server SHALL return this element with only the    "version" and
+                "updateSequence" attributes. Otherwise, all optional elements    SHALL be included
+                or not depending on the actual value of the Contents    parameter in the
+                GetCapabilities operation request.    </documentation>
+        </annotation>
+        <complexType>
+            <complexContent>
+                <extension base="ows:CapabilitiesBaseType">
+                    <sequence>
+                        <element minOccurs="0" name="Contents" type="wmts:ContentsType">
+                            <annotation>
+                                <documentation>Metadata about the data served by this server.
+                                    For WMTS, this section SHALL contain data about layers and
+                                    TileMatrixSets</documentation>
+                            </annotation>
+                        </element>
+                        <element maxOccurs="unbounded" minOccurs="0" ref="wmts:Themes">
+                            <annotation>
+                                <documentation>         Metadata describing a theme hierarchy for
+                                    the layers         </documentation>
+                            </annotation>
+                        </element>
+                        <element maxOccurs="unbounded" minOccurs="0" name="WSDL"
+                            type="ows:OnlineResourceType">
+                            <annotation>
+                                <documentation>Reference to a WSDL resource</documentation>
+                            </annotation>
+                        </element>
+                        <element maxOccurs="unbounded" minOccurs="0" name="ServiceMetadataURL"
+                            type="ows:OnlineResourceType">
+                            <annotation>
+                                <documentation>         Reference to a ServiceMetadata resource on
+                                    resource         oriented architectural style
+                                </documentation>
+                            </annotation>
+                        </element>
+                    </sequence>
+                </extension>
+            </complexContent>
+        </complexType>
+    </element>
+    <complexType name="ContentsType">
+        <complexContent>
+            <extension base="ows:ContentsBaseType">
+                <sequence>
+                    <element maxOccurs="unbounded" minOccurs="0" ref="wmts:TileMatrixSet">
+                        <annotation>
+                            <documentation>A description of the geometry of a tile
+                                fragmentation</documentation>
+                        </annotation>
+                    </element>
+                </sequence>
+            </extension>
+        </complexContent>
+    </complexType>
+    <!-- ********************************************************************* -->
+    <!-- **  The Layer element.                                                      ** -->
+    <!-- ********************************************************************* -->
+    <element name="Layer" substitutionGroup="ows:DatasetDescriptionSummary" type="wmts:LayerType"/>
+    <complexType name="LayerType">
+        <complexContent>
+            <extension base="ows:DatasetDescriptionSummaryBaseType">
+                <sequence>
+                    <element maxOccurs="unbounded" ref="wmts:Style">
+                        <annotation>
+                            <documentation>Metadata about the styles of this layer</documentation>
+                        </annotation>
+                    </element>
+                    <element maxOccurs="unbounded" name="Format" type="ows:MimeType">
+                        <annotation>
+                            <documentation>Supported valid output MIME types for a
+                                tile</documentation>
+                        </annotation>
+                    </element>
+                    <element maxOccurs="unbounded" minOccurs="0" name="InfoFormat"
+                        type="ows:MimeType">
+                        <annotation>
+                            <documentation>        Supported valid output MIME types for a
+                                FeatureInfo.        If there isn't any, The server do not support
+                                FeatureInfo requests        for this layer.</documentation>
+                        </annotation>
+                    </element>
+                    <element maxOccurs="unbounded" minOccurs="0" ref="wmts:Dimension">
+                        <annotation>
+                            <documentation>Extra dimensions for a tile and FeatureInfo
+                                requests.</documentation>
+                        </annotation>
+                    </element>
+                    <element maxOccurs="unbounded" ref="wmts:TileMatrixSetLink">
+                        <annotation>
+                            <documentation>Reference to a tileMatrixSet and limits</documentation>
+                        </annotation>
+                    </element>
+                    <element maxOccurs="unbounded" minOccurs="0" name="ResourceURL"
+                        type="wmts:URLTemplateType">
+                        <annotation>
+                            <documentation>         URL template to a tile or a FeatureInfo resource
+                                on         resource oriented architectural style
+                            </documentation>
+                        </annotation>
+                    </element>
+                </sequence>
+            </extension>
+        </complexContent>
+    </complexType>
+    <!-- ********************************************************************* -->
+    <!-- **  Style and LegendURL elements                                   ** -->
+    <!-- ********************************************************************* -->
+    <element name="Style">
+        <complexType>
+            <complexContent>
+                <extension base="ows:DescriptionType">
+                    <sequence>
+                        <element ref="ows:Identifier">
+                            <annotation>
+                                <documentation>          An unambiguous reference to this style,
+                                    identifying          a specific version when needed, normally
+                                    used by software         </documentation>
+                            </annotation>
+                        </element>
+                        <element maxOccurs="unbounded" minOccurs="0" ref="wmts:LegendURL">
+                            <annotation>
+                                <documentation>Description of an image that represents         the
+                                    legend of the map</documentation>
+                            </annotation>
+                        </element>
+                    </sequence>
+                    <attribute name="isDefault" type="boolean">
+                        <annotation>
+                            <documentation>This style is used when no style is
+                                specified</documentation>
+                        </annotation>
+                    </attribute>
+                </extension>
+            </complexContent>
+        </complexType>
+    </element>
+    <element name="LegendURL">
+        <annotation>
+            <documentation>         Zero or more LegendURL elements may be provided, providing an
+                image(s) of a legend relevant to each Style of a Layer.  The Format         element
+                indicates the MIME type of the legend. minScaleDenominator         and
+                maxScaleDenominator attributes may be provided to indicate to         the client
+                which scale(s) (inclusive) the legend image is appropriate         for.  (If
+                provided, these values must exactly match the scale         denominators of
+                available TileMatrixes.)  width and height         attributes may be provided to
+                assist client applications in laying         out space to display the legend.
+            </documentation>
+        </annotation>
+        <complexType>
+            <complexContent>
+                <extension base="ows:OnlineResourceType">
+                    <annotation>
+                        <documentation>The URL from which the legend image can be
+                            retrieved</documentation>
+                    </annotation>
+                    <attribute name="format" type="ows:MimeType">
+                        <annotation>
+                            <documentation>A supported output format for the legend
+                                image</documentation>
+                        </annotation>
+                    </attribute>
+                    <attribute name="minScaleDenominator" type="double">
+                        <annotation>
+                            <documentation>Denominator of the minimum scale (inclusive) for which
+                                this legend image is valid</documentation>
+                        </annotation>
+                    </attribute>
+                    <attribute name="maxScaleDenominator" type="double">
+                        <annotation>
+                            <documentation>Denominator of the maximum scale (exclusive) for which
+                                this legend image is valid</documentation>
+                        </annotation>
+                    </attribute>
+                    <attribute name="width" type="positiveInteger">
+                        <annotation>
+                            <documentation>Width (in pixels) of the legend image</documentation>
+                        </annotation>
+                    </attribute>
+                    <attribute name="height" type="positiveInteger">
+                        <annotation>
+                            <documentation>Height (in pixels) of the legend image</documentation>
+                        </annotation>
+                    </attribute>
+                </extension>
+                <!--/attributeGroup-->
+            </complexContent>
+        </complexType>
+    </element>
+    <!-- ********************************************************************* -->
+    <!-- **  The Dimension element.                                               ** -->
+    <!-- ********************************************************************* -->
+    <element name="Dimension">
+        <annotation>
+            <documentation>     Metadata about a particular dimension that the tiles of     a layer
+                are available.    </documentation>
+        </annotation>
+        <complexType>
+            <complexContent>
+                <extension base="ows:DescriptionType">
+                    <sequence>
+                        <element ref="ows:Identifier">
+                            <annotation>
+                                <documentation>A name of dimensional axis</documentation>
+                            </annotation>
+                        </element>
+                        <element minOccurs="0" ref="ows:UOM">
+                            <annotation>
+                                <documentation>Units of measure of dimensional axis.</documentation>
+                            </annotation>
+                        </element>
+                        <element minOccurs="0" name="UnitSymbol" type="string">
+                            <annotation>
+                                <documentation>Symbol of the units.</documentation>
+                            </annotation>
+                        </element>
+                        <element minOccurs="0" name="Default" type="string">
+                            <annotation>
+                                <documentation>          Default value that will be used if a tile
+                                    request does          not specify a value or uses the keyword
+                                    'default'.         </documentation>
+                            </annotation>
+                        </element>
+                        <element minOccurs="0" name="Current" type="boolean">
+                            <annotation>
+                                <documentation>          A value of 1 (or 'true') indicates (a) that
+                                    temporal data are          normally kept current and (b) that
+                                    the request value of this          dimension accepts the keyword
+                                    'current'.         </documentation>
+                            </annotation>
+                        </element>
+                        <element maxOccurs="unbounded" name="Value" type="string">
+                            <annotation>
+                                <documentation>Available value for this dimension.</documentation>
+                            </annotation>
+                        </element>
+                    </sequence>
+                </extension>
+            </complexContent>
+        </complexType>
+    </element>
+    <!-- ****************************************************************************************** -->
+    <!-- **  The TileMatrixSetLink, TileMatrixSetLimits and TileMatrixLimits element. ** -->
+    <!-- ****************************************************************************************** -->
+    <element name="TileMatrixSetLink">
+        <annotation>
+            <documentation>Metadata about the TileMatrixSet reference.</documentation>
+        </annotation>
+        <complexType>
+            <sequence>
+                <element name="TileMatrixSet" type="string">
+                    <annotation>
+                        <documentation>Reference to a tileMatrixSet</documentation>
+                    </annotation>
+                </element>
+                <element minOccurs="0" ref="wmts:TileMatrixSetLimits">
+                    <annotation>
+                        <documentation>Indices limits for this tileMatrixSet. The absence of this
+                            element means that tile row and tile col indices are only limited by 0
+                            and the corresponding tileMatrixSet maximum definitions.</documentation>
+                    </annotation>
+                </element>
+            </sequence>
+        </complexType>
+    </element>
+    <element name="TileMatrixSetLimits">
+        <annotation>
+            <documentation>     Metadata about a the limits of the tile row and tile col indices.
+            </documentation>
+        </annotation>
+        <complexType>
+            <sequence>
+                <element maxOccurs="unbounded" ref="wmts:TileMatrixLimits">
+                    <annotation>
+                        <documentation>        Metadata describing the limits of the TileMatrixSet
+                            indices.        Multiplicity must be the multiplicity of TileMatrix in
+                            this        TileMatrixSet.       </documentation>
+                    </annotation>
+                </element>
+            </sequence>
+        </complexType>
+    </element>
+    <element name="TileMatrixLimits">
+        <annotation>
+            <documentation>Metadata describing the limits of a TileMatrix       for this
+                layer.</documentation>
+        </annotation>
+        <complexType>
+            <sequence>
+                <element name="TileMatrix" type="string">
+                    <annotation>
+                        <documentation>Reference to a TileMatrix identifier</documentation>
+                    </annotation>
+                </element>
+                <element name="MinTileRow" type="nonNegativeInteger">
+                    <annotation>
+                        <documentation>Minimum tile row index valid for this       layer. From 0 to
+                            maxTileRow</documentation>
+                    </annotation>
+                </element>
+                <element name="MaxTileRow" type="positiveInteger">
+                    <annotation>
+                        <documentation>Maximim tile row index valid for this       layer. From
+                            minTileRow to matrixWidth-1 of the tileMatrix       section of this
+                            tileMatrixSet</documentation>
+                    </annotation>
+                </element>
+                <element name="MinTileCol" type="nonNegativeInteger">
+                    <annotation>
+                        <documentation>Minimum tile column index valid for this       layer. From 0
+                            to maxTileCol</documentation>
+                    </annotation>
+                </element>
+                <element name="MaxTileCol" type="positiveInteger">
+                    <annotation>
+                        <documentation>Maximim tile column index valid for this layer.       From
+                            minTileCol to tileHeight-1 of the tileMatrix section       of this
+                            tileMatrixSet.</documentation>
+                    </annotation>
+                </element>
+            </sequence>
+        </complexType>
+    </element>
+    <simpleType name="KnownResourceTypeCodeType">
+        <annotation>
+            <documentation>Resource type to be retrieved. The WMTS main standard only defines "tile"
+                or "FeatureInfo" but others can be incorporated in the future.</documentation>
+        </annotation>
+        <restriction base="string">
+            <enumeration value="tile"/>
+            <enumeration value="FeatureInfo"/>
+        </restriction>
+    </simpleType>
+    <simpleType name="ResourceTypeCodeType">
+        <union memberTypes="wmts:KnownResourceTypeCodeType string"/>
+    </simpleType>
+    <!-- ********************************************* -->
+    <!-- **  The URLTemplateType data type. ** -->
+    <!-- ********************************************* -->
+    <complexType name="URLTemplateType">
+        <attribute name="format" type="ows:MimeType" use="required">
+            <annotation>
+                <documentation>Format of the resource representation that can     be retrieved one
+                    resolved the URL template.</documentation>
+            </annotation>
+        </attribute>
+        <attribute name="resourceType" type="wmts:ResourceTypeCodeType" use="required"/>
+        <attribute name="template" use="required">
+            <annotation>
+                <documentation>URL template. A template processor will be     applied to substitute
+                    some variables between {} for their values     and get a URL to a resource.
+                    We cound not use a anyURI type (that conforms the character     restrictions
+                    specified in RFC2396 and excludes '{' '}' characters     in some XML parsers)
+                    because this attribute must accept the     '{' '}' caracters.</documentation>
+            </annotation>
+            <simpleType>
+                <restriction base="string">
+                    <pattern
+                        value="([A-Za-z0-9\-_\.!~\*'\(\);/\?:@\+:$,#\{\}=&amp;]|%[A-Fa-f0-9][A-Fa-f0-9])+"
+                    />
+                </restriction>
+            </simpleType>
+        </attribute>
+    </complexType>
+    <!-- ********************************************************************* -->
+    <!-- **  The TileMatrixSet element.                                         ** -->
+    <!-- ********************************************************************* -->
+    <element name="TileMatrixSet">
+        <annotation>
+            <documentation>Describes a particular set of tile matrices.</documentation>
+        </annotation>
+        <complexType>
+            <complexContent>
+                <extension base="ows:DescriptionType">
+                    <sequence>
+                        <element ref="ows:Identifier">
+                            <annotation>
+                                <documentation>Tile matrix set identifier</documentation>
+                            </annotation>
+                        </element>
+                        <element minOccurs="0" ref="ows:BoundingBox">
+                            <annotation>
+                                <documentation>          Minimum bounding rectangle surrounding
+                                    the visible layer presented by this tile matrix          set, in
+                                    the supported CRS </documentation>
+                            </annotation>
+                        </element>
+                        <element ref="ows:SupportedCRS">
+                            <annotation>
+                                <documentation>Reference to one coordinate reference         system
+                                    (CRS).</documentation>
+                            </annotation>
+                        </element>
+                        <element minOccurs="0" name="WellKnownScaleSet" type="anyURI">
+                            <annotation>
+                                <documentation>Reference to a well known scale set.
+                                    urn:ogc:def:wkss:OGC:1.0:GlobalCRS84Scale,
+                                    urn:ogc:def:wkss:OGC:1.0:GlobalCRS84Pixel,
+                                    urn:ogc:def:wkss:OGC:1.0:GoogleCRS84Quad and
+                                    urn:ogc:def:wkss:OGC:1.0:GoogleMapsCompatible are
+                                    possible values that are defined in Annex E. It has to be
+                                    consistent with the         SupportedCRS and with the
+                                    ScaleDenominators of the TileMatrix elements.
+                                </documentation>
+                            </annotation>
+                        </element>
+                        <element maxOccurs="unbounded" ref="wmts:TileMatrix">
+                            <annotation>
+                                <documentation>Describes a scale level and its tile
+                                    matrix.</documentation>
+                            </annotation>
+                        </element>
+                    </sequence>
+                </extension>
+            </complexContent>
+        </complexType>
+    </element>
+    <!-- ********************************************************************* -->
+    <!-- **  The TileMatrix element.                                                ** -->
+    <!-- ********************************************************************* -->
+    <element name="TileMatrix">
+        <annotation>
+            <documentation>Describes a particular tile matrix.</documentation>
+        </annotation>
+        <complexType>
+            <complexContent>
+                <extension base="ows:DescriptionType">
+                    <sequence>
+                        <element ref="ows:Identifier">
+                            <annotation>
+                                <documentation>Tile matrix identifier. Typically an abreviation of
+                                    the ScaleDenominator value or its equivalent pixel
+                                    size</documentation>
+                            </annotation>
+                        </element>
+                        <element name="ScaleDenominator" type="double">
+                            <annotation>
+                                <documentation>Scale denominator level of this tile
+                                    matrix</documentation>
+                            </annotation>
+                        </element>
+                        <element name="TopLeftCorner" type="ows:PositionType">
+                            <annotation>
+                                <documentation>          Position in CRS coordinates of the top-left
+                                    corner of this tile matrix.          This are the  precise
+                                    coordinates of the top left corner of top left          pixel of
+                                    the 0,0 tile in SupportedCRS coordinates of this TileMatrixSet.
+                                </documentation>
+                            </annotation>
+                        </element>
+                        <element name="TileWidth" type="positiveInteger">
+                            <annotation>
+                                <documentation>Width of each tile of this tile matrix in
+                                    pixels.</documentation>
+                            </annotation>
+                        </element>
+                        <element name="TileHeight" type="positiveInteger">
+                            <annotation>
+                                <documentation>Height of each tile of this tile matrix in
+                                    pixels</documentation>
+                            </annotation>
+                        </element>
+                        <element name="MatrixWidth" type="positiveInteger">
+                            <annotation>
+                                <documentation>Width of the matrix (number of tiles in
+                                    width)</documentation>
+                            </annotation>
+                        </element>
+                        <element name="MatrixHeight" type="positiveInteger">
+                            <annotation>
+                                <documentation>Height of the matrix (number of tiles in
+                                    height)</documentation>
+                            </annotation>
+                        </element>
+                    </sequence>
+                </extension>
+            </complexContent>
+        </complexType>
+    </element>
+    <!-- ********************************************************************* -->
+    <!-- **  The Themes, Theme and LayerRef elements.                       ** -->
+    <!-- ********************************************************************* -->
+    <element name="Themes">
+        <annotation>
+            <documentation>     Provides a set of hierarchical themes that the     client can use to
+                categorize the layers by.    </documentation>
+        </annotation>
+        <complexType>
+            <sequence>
+                <element maxOccurs="unbounded" minOccurs="0" ref="wmts:Theme">
+                    <annotation>
+                        <documentation>        Metadata describing the top-level themes where
+                            layers available on this server can be classified.
+                        </documentation>
+                    </annotation>
+                </element>
+            </sequence>
+        </complexType>
+    </element>
+    <element name="Theme">
+        <complexType>
+            <complexContent>
+                <extension base="ows:DescriptionType">
+                    <sequence>
+                        <element ref="ows:Identifier">
+                            <annotation>
+                                <documentation>Name of the theme</documentation>
+                            </annotation>
+                        </element>
+                        <element maxOccurs="unbounded" minOccurs="0" ref="wmts:Theme">
+                            <annotation>
+                                <documentation>          Metadata describing the child (subordinate)
+                                    themes          of this theme where layers available on this
+                                    server          can be classified         </documentation>
+                            </annotation>
+                        </element>
+                        <element maxOccurs="unbounded" minOccurs="0" name="LayerRef" type="anyURI">
+                            <annotation>
+                                <documentation>Reference to layer</documentation>
+                            </annotation>
+                        </element>
+                    </sequence>
+                </extension>
+            </complexContent>
+        </complexType>
+    </element>
+</schema>

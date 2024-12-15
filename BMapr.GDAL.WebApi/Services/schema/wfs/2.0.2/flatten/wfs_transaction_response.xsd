@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema elementFormDefault="qualified" targetNamespace="http://www.opengis.net/wfs/2.0"
+    version="2.0.2" xmlns:fes="http://www.opengis.net/fes/2.0"
+    xmlns:ows="http://www.opengis.net/ows/1.1" xmlns:wfs="http://www.opengis.net/wfs/2.0"
+    xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xml="http://www.w3.org/XML/1998/namespace"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <!-- ==============================================================
+        Includes and Imports
+        ============================================================== -->
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" schemaLocation="xml.xsd"/>
+    <xsd:import namespace="http://www.w3.org/1999/xlink" schemaLocation="xlink.xsd"/>
+    <xsd:import namespace="http://www.opengis.net/ows/1.1" schemaLocation="owsAll.xsd"/>
+    <xsd:import namespace="http://www.opengis.net/fes/2.0" schemaLocation="filterAll.xsd"/>
+    <xsd:element name="TransactionResponse" type="wfs:TransactionResponseType"/>
+    <xsd:complexType name="TransactionSummaryType">
+        <xsd:sequence>
+            <xsd:element minOccurs="0" name="totalInserted" type="xsd:nonNegativeInteger"/>
+            <xsd:element minOccurs="0" name="totalUpdated" type="xsd:nonNegativeInteger"/>
+            <xsd:element minOccurs="0" name="totalReplaced" type="xsd:nonNegativeInteger"/>
+            <xsd:element minOccurs="0" name="totalDeleted" type="xsd:nonNegativeInteger"/>
+        </xsd:sequence>
+    </xsd:complexType>
+    <xsd:complexType name="ActionResultsType">
+        <xsd:sequence>
+            <xsd:element maxOccurs="unbounded" name="Feature"
+                type="wfs:CreatedOrModifiedFeatureType"/>
+        </xsd:sequence>
+    </xsd:complexType>
+    <xsd:simpleType name="VersionStringType">
+        <xsd:restriction base="xsd:string">
+            <xsd:pattern value="2\.0\.\d+"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+    <xsd:complexType name="CreatedOrModifiedFeatureType">
+        <xsd:sequence maxOccurs="unbounded">
+            <xsd:element ref="fes:ResourceId"/>
+        </xsd:sequence>
+        <xsd:attribute name="handle" type="xsd:string"/>
+    </xsd:complexType>
+    <xsd:complexType name="TransactionResponseType">
+        <xsd:sequence>
+            <xsd:element name="TransactionSummary" type="wfs:TransactionSummaryType"/>
+            <xsd:element minOccurs="0" name="InsertResults" type="wfs:ActionResultsType"/>
+            <xsd:element minOccurs="0" name="UpdateResults" type="wfs:ActionResultsType"/>
+            <xsd:element minOccurs="0" name="ReplaceResults" type="wfs:ActionResultsType"/>
+        </xsd:sequence>
+        <xsd:attribute name="version" type="wfs:VersionStringType" use="required"/>
+    </xsd:complexType>
+</xsd:schema>
