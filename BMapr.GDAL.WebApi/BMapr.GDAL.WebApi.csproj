@@ -72,10 +72,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="GlobalAssemblyInfo.proj" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Reference Include="gdalconst_csharp">
       <HintPath>lib\gdalconst_csharp.dll</HintPath>
     </Reference>
