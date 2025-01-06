@@ -11,11 +11,19 @@ BMapr is an AddOn for MapServer, designed to enhance its functionality and provi
 2. Extract files (C:\BMapr\)
 3. Set up the appropriate version of the [ASP.NET Core Runtime 9.0.xx: Hosting Bundle](https://dotnet.microsoft.com/en-us/download/dotnet/9.0) 
 
-# Run
-Use following command:
+# Run as hosting app
+
+This is not recommended for productive environments, only for test cases !
+
+Use following command (run as adminstrator):
 ``` bat
 C:\BMapr\BMapr.GDAL.WebApi.exe port=8080
 ```
+
+# Run as iis website
+
+Create a new website in the IIS, which points to the root folder => use the following endpoint, please change the port according your configuration.
+
 # Configuration BMapr
 * Possibility to change configurations in appsettings.json 
 # Configuration MapServer
@@ -24,8 +32,8 @@ C:\BMapr\BMapr.GDAL.WebApi.exe port=8080
 
 # Endpoints
 * Swagger UI: Explore APIs at http://localhost:8080/swagger
-* Health Check: Use the http://localhost:8080/ping endpoint for monitoring
-* Version Info: Check installed versions at http://localhost:8080/api/server/version
+* Health Check: Use the http://localhost:8080/api/server/ping endpoint for monitoring
+* Version Info: Check installed versions at http://localhost:8080/api/server/version?token=<your secret> please have a look in the appsettings.json Settings|Token
 
 # Credits
 Main contributor is [bad-ch](https://github.com/bad-ch). :ok_man:
