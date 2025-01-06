@@ -20,9 +20,9 @@ Use following command (run as adminstrator):
 C:\BMapr\BMapr.GDAL.WebApi.exe port=8080
 ```
 
-# Run as iis website
+# Run as IIS website
 
-Create a new website in the IIS, which points to the root folder => use the following endpoint, please change the port according your configuration.
+Create a new website in the IIS, which points to the root folder => use the following endpoints, please change the port according your configuration.
 
 # Configuration BMapr
 * Possibility to change configurations in appsettings.json 
@@ -33,7 +33,7 @@ Create a new website in the IIS, which points to the root folder => use the foll
 # Endpoints
 * Swagger UI: Explore APIs at http://localhost:8080/swagger
 * Health Check: Use the http://localhost:8080/api/server/ping endpoint for monitoring
-* Version Info: Check installed versions at http://localhost:8080/api/server/version?token=<your secret> please have a look in the appsettings.json Settings|Token
+* Version Info: Check installed versions at http://localhost:8080/api/server/version?token=mysecret please have a look in the appsettings.json Settings|Token
 
 # Credits
 Main contributor is [bad-ch](https://github.com/bad-ch). :ok_man:
