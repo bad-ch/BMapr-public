@@ -11,6 +11,14 @@
                 return host;
             }
 
+            var xForwardedHost = request.Headers["X-Forwarded-Host"];
+            var xForwardedProto = request.Headers["X-Forwarded-Proto"];
+
+            if (!string.IsNullOrEmpty(xForwardedHost) && !string.IsNullOrEmpty(xForwardedProto))
+            {
+                return $"{xForwardedProto}://{xForwardedHost}{request.PathBase}";
+            }
+
             return $"{request.Scheme}://{request.Host}{request.PathBase}";
         }
     }
