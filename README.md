@@ -13,8 +13,6 @@ BMapr is an AddOn for MapServer, designed to enhance its functionality and provi
 
 # Run as hosting app
 
-This is not recommended for productive environments, only for test cases !
-
 Use following command (run as adminstrator):
 ``` bat
 C:\BMapr\BMapr.GDAL.WebApi.exe port=8080
