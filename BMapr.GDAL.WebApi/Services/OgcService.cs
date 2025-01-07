@@ -17,7 +17,7 @@ namespace BMapr.GDAL.WebApi.Services
             Post
         }
 
-        public static ActionResult Process(RequestType requestType, string queryString, string body, Config config, string project, string bodyContentType = "", bool wmsRaw = false)
+        public static ActionResult Process(RequestType requestType, string queryString, string body, Config config, string project, string bodyContentType = "")
         {
             var mapMetadata = MapFileService.GetMapFromProject(project, config);
 
@@ -84,24 +84,6 @@ namespace BMapr.GDAL.WebApi.Services
             try
             {
                 map = new mapObj(mapConfig.MapPath);
-
-                //if (wmsRaw && serviceParameter == "wms" && requestParameter == "getmap")
-                //{
-                //    var rawWmsService = new RawWmsService(map);
-                //    var bboxParts = queryStringParameters["bbox"].Split(",");
-                //    contentBytes = rawWmsService.GetMap(
-                //        queryStringParameters["layers"] ?? "",
-                //        queryStringParameters["crs"] ?? "epsg:2056",
-                //        System.Convert.ToDouble(bboxParts[0]),
-                //        System.Convert.ToDouble(bboxParts[1]),
-                //        System.Convert.ToDouble(bboxParts[2]),
-                //        System.Convert.ToDouble(bboxParts[3]),
-                //        System.Convert.ToInt32(queryStringParameters["width"]),
-                //        System.Convert.ToInt32(queryStringParameters["height"]),
-                //        queryStringParameters["format"] ?? "image/png"
-                //    );
-                //    contentType = queryStringParameters["format"];
-                //}
 
                 if (requestType == RequestType.Get)
                 {

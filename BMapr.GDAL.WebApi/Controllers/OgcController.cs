@@ -61,9 +61,7 @@ namespace BMapr.WebApi.Controllers
                 return WmtsService.HandleRequest(project, queryString, Config);
             }
 
-            var wmsRaw = IConfig.GetSection("Settings").GetValue<bool>("WmsRaw");
-
-            return OgcService.Process( OgcService.RequestType.Get, queryString , "", Config, project,"",wmsRaw);
+            return OgcService.Process( OgcService.RequestType.Get, queryString , "", Config, project,"");
         }
 
         /// <summary>
