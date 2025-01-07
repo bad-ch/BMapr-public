@@ -51,7 +51,7 @@ namespace BMapr.WebApi.Controllers
                 queryString = queryString.Substring(1);
             }
 
-            Config.Host = $"{Request.Scheme}://{Request.Host}{Request.PathBase}";
+            Config.Host = HostService.Get(Request);
 
             _logger.LogDebug($"OGC interface: {project}, {queryString}");
 
@@ -89,7 +89,7 @@ namespace BMapr.WebApi.Controllers
                 return BadRequest("Post request body is empty");
             }
 
-            Config.Host = $"{Request.Scheme}://{Request.Host}{Request.PathBase}";
+            Config.Host = HostService.Get(Request);
 
             if (bodyContentLower.Contains("service") && bodyContentLower.Contains("wfs") && bodyContentLower.Contains("transaction"))
             {
@@ -104,7 +104,7 @@ namespace BMapr.WebApi.Controllers
         [HttpGet("{project}/wmts/getcapabilities/{version}")]
         public ActionResult WmtsRest(string project, string version)
         {
-            Config.Host = $"{Request.Scheme}://{Request.Host}{Request.PathBase}";
+            Config.Host = HostService.Get(Request);
 
             return WmtsService.HandleRequest( project, $"SERVICE=WMTS&REQUEST=GetCapabilities&VERSION={version}", Config);
         }
