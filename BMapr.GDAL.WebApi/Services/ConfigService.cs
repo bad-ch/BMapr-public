@@ -7,18 +7,6 @@ namespace BMapr.GDAL.WebApi.Services
     {
         public static Dictionary<string, mapObj> MapObjCache { get; set; } = new Dictionary<string, mapObj>();
 
-        public static string GetUrl(HttpRequest request)
-        {
-            return string.Concat(
-                request.Scheme,
-                "://",
-                request.Host.ToUriComponent(),
-                request.PathBase.ToUriComponent()
-                //request.Path.ToUriComponent(),
-                //request.QueryString.ToUriComponent()
-            );
-        }
-
         public static Config Get(IConfiguration iConfig, IWebHostEnvironment environment)
         {
             var config = new Config();

@@ -118,7 +118,7 @@ namespace BMapr.GDAL.WebApi.Controllers
                 return BadRequest("Create project fail");
             }
 
-            FileService.UpdateMapFile(dataProject, guid.ToString(), Config, ConfigService.GetUrl(Request));
+            FileService.UpdateMapFile(dataProject, guid.ToString(), Config, HostService.Get(Request, IConfig));
 
             return new JsonResult(new
             {
@@ -161,7 +161,7 @@ namespace BMapr.GDAL.WebApi.Controllers
                 return BadRequest("Update project, copy new project fail");
             }
 
-            FileService.UpdateMapFile(dataProject, project, Config, ConfigService.GetUrl(Request));
+            FileService.UpdateMapFile(dataProject, project, Config, HostService.Get(Request, IConfig));
 
             return new JsonResult(new
                 {
@@ -274,7 +274,7 @@ namespace BMapr.GDAL.WebApi.Controllers
                 return BadRequest("User or system token invalid");
             }
 
-            Config.Host = HostService.Get(Request);
+            Config.Host = HostService.Get(Request, IConfig);
 
             var mapserverService = new MapserverService(_cache, Config, project);
             var result = mapserverService.GetMetadata(mapserverService.Map);
@@ -314,7 +314,7 @@ namespace BMapr.GDAL.WebApi.Controllers
                 return BadRequest("User or system token invalid");
             }
 
-            Config.Host = HostService.Get(Request);
+            Config.Host = HostService.Get(Request, IConfig);
 
             var mapMetadata = MapFileService.GetMapFromProject(project, Config);
 
@@ -367,7 +367,7 @@ namespace BMapr.GDAL.WebApi.Controllers
                 return BadRequest("User or system token invalid");
             }
 
-            Config.Host = HostService.Get(Request);
+            Config.Host = HostService.Get(Request, IConfig);
 
             var mapMetadata = MapFileService.GetMapFromProject(project, Config);
 
@@ -500,7 +500,7 @@ namespace BMapr.GDAL.WebApi.Controllers
                 return BadRequest("User or system token invalid");
             }
 
-            Config.Host = HostService.Get(Request);
+            Config.Host = HostService.Get(Request, IConfig);
 
             var projects = new List<string>() {project};
             var projectsConcatenate = string.Join(',', projects.Select(x => $"'{x}'"));
@@ -565,7 +565,7 @@ namespace BMapr.GDAL.WebApi.Controllers
                 return BadRequest("User or system token invalid");
             }
 
-            Config.Host = HostService.Get(Request);
+            Config.Host = HostService.Get(Request, IConfig);
 
             var mapMetadata = MapFileService.GetMapFromProject(project, Config);
 
