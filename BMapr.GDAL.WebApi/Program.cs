@@ -50,7 +50,7 @@ builder.Services.AddSwaggerGen(options =>
     {
         Version = "v1",
         Title = "BMapr",
-        Description = ".Net 7 Web API, provide OGC service interface and other helpers based on GDAL/OGR MapServer, for example add WMTS and WFS-T functionality",
+        Description = ".Net 9 Web API, provide OGC service interface and other helpers based on GDAL/OGR MapServer, for example add WMTS and WFS-T functionality",
     });
 
     var xmlFilename = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
