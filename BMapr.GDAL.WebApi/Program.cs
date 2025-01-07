@@ -1,6 +1,3 @@
-using System.Diagnostics;
-using System.Net;
-using System.Reflection;
 using BMapr.GDAL.WebApi;
 using BMapr.GDAL.WebApi.Models.Job;
 using Microsoft.AspNetCore.Authentication;
@@ -12,6 +9,9 @@ using OSGeo.OGR;
 using Quartz;
 using Quartz.AspNetCore;
 using Serilog;
+using System.Diagnostics;
+using System.Net;
+using System.Reflection;
 
 /**********************************************************************************
  * Builder
