@@ -6,10 +6,16 @@ BMapr is an AddOn for MapServer, designed to enhance its functionality and provi
 * BMapr Enhancements:
   * Support for WFS-T (T for Transaction not Time) on Microsoft SQL Server.
   * Integrated lightweight web server.
+
 # Installation
+
+## Prerequisits
+* [ASP.NET Core Runtime 9.0.xx: Hosting Bundle](https://dotnet.microsoft.com/en-us/download/dotnet/9.0)
+* [Microsoft Visual C++ Redistributable (x64)](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#latest-microsoft-visual-c-redistributable-version) v14.40 or higher
+
+## Setup
 1. Download binaries from releases.
-2. Extract files (C:\BMapr\)
-3. Set up the appropriate version of the [ASP.NET Core Runtime 9.0.xx: Hosting Bundle](https://dotnet.microsoft.com/en-us/download/dotnet/9.0) 
+2. Extract all files (C:\BMapr\)
 
 # Run as hosting app
 
