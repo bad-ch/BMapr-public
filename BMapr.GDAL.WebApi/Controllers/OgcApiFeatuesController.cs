@@ -129,7 +129,7 @@ namespace BMapr.GDAL.WebApi.Controllers
         }
 
         /// <summary>
-        /// Endpoint (GET) for landing page
+        /// Endpoint (GET) conformance page
         /// </summary>
         /// <param name="project"></param>
         /// <returns></returns>
@@ -160,6 +160,80 @@ namespace BMapr.GDAL.WebApi.Controllers
                     "http://www.opengis.net/spec/ogcapi-features-1/1.1/conf/geojson"
                 }
             });
+        }
+
+        /// <summary>
+        /// Endpoint (GET) for feature/data page
+        /// </summary>
+        /// <param name="project"></param>
+        /// <returns></returns>
+        [HttpGet("{project}/collections/{collectionId}/items")]
+        [HttpHead("{project}/collections/{collectionId}/items")]
+        public ActionResult Feature(string project, string collectionId, [FromQuery] string bbox, [FromQuery] string query, [FromQuery] string f = "application/json", [FromQuery] int limit = 10)
+        {
+            // no alternate format supported
+
+            if (f.ToLower() != "application/json")
+            {
+                return BadRequest("OGC API format not supported");
+            }
+
+            var projectPath = Path.Combine(Config.DataProjects.FullName, project);
+
+            if (!System.IO.Directory.Exists(projectPath))
+            {
+                return BadRequest("OGC API project not found");
+            }
+
+            Config.Host = HostService.Get(Request, IConfig);
+
+            // todo check collection id exists
+            if (string.IsNullOrEmpty(collectionId))
+            {
+                return BadRequest("OGC API collection id is empty");
+            }
+
+            if (!(limit > 0 && limit < 100000)) // max specification 10'000
+            {
+                return BadRequest("OGC API limit has to be between 1 and 100'000");
+            }
+
+            var bboxDouble = new List<double>();
+
+            if (!string.IsNullOrEmpty(bbox))
+            {
+                try
+                {
+                    bboxDouble = bbox.Split(',').Select(Convert.ToDouble).ToList();
+                }
+                catch (Exception)
+                {
+                    return BadRequest("OGC API bbox are no valid numbers");
+                }
+
+                if ((bboxDouble.Count < 4 || bboxDouble.Count > 6))
+                {
+                    return BadRequest("OGC API bbox has to be an array of double values, 4-6 items");
+                }
+
+                if (bboxDouble.Count == 4 && !(bboxDouble[2] > bboxDouble[0] && bboxDouble[3] > bboxDouble[1]))
+                {
+                    return BadRequest("OGC API bbox has to be xmin,ymin,xmax,ymax");
+                }
+
+                if (bboxDouble.Count == 6 && !(bboxDouble[3] > bboxDouble[0] && bboxDouble[4] > bboxDouble[1] && bboxDouble[5] > bboxDouble[2]))
+                {
+                    return BadRequest("OGC API bbox has to be xmin,ymin,zmin,xmax,ymax,zmax");
+                }
+            }
+
+            // todo checks for filter
+
+            // todo return value
+            OgcApiFeaturesService.Get(Config, project, collectionId, bboxDouble, query, limit, f);
+
+            //todo add content
+            return Ok();
         }
     }
 }
