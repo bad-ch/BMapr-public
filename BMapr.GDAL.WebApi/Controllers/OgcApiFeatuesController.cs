@@ -127,5 +127,39 @@ namespace BMapr.GDAL.WebApi.Controllers
 
             return Ok(JsonConvert.SerializeObject(landingPage));
         }
+
+        /// <summary>
+        /// Endpoint (GET) for landing page
+        /// </summary>
+        /// <param name="project"></param>
+        /// <returns></returns>
+        [HttpGet("{project}/conformance")]
+        [HttpHead("{project}/conformance")]
+        public ActionResult Conformance(string project, [FromQuery] string f = "application/json")
+        {
+            // no alternate format supported
+
+            if (f.ToLower() != "application/json")
+            {
+                return BadRequest("OGC API format not supported");
+            }
+
+            var projectPath = Path.Combine(Config.DataProjects.FullName, project);
+
+            if (!System.IO.Directory.Exists(projectPath))
+            {
+                return BadRequest("OGC API project not found");
+            }
+
+            Config.Host = HostService.Get(Request, IConfig);
+
+            return Ok(new
+            {
+                conformsTo = new List<string>() {
+                    "http://www.opengis.net/spec/ogcapi-features-1/1.1/conf/core",
+                    "http://www.opengis.net/spec/ogcapi-features-1/1.1/conf/geojson"
+                }
+            });
+        }
     }
 }
