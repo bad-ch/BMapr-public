@@ -1,4 +1,5 @@
-﻿using BMapr.GDAL.WebApi.Models;
+﻿using System.Text;
+using BMapr.GDAL.WebApi.Models;
 using BMapr.GDAL.WebApi.Models.OgcApi.Features;
 using BMapr.GDAL.WebApi.Services;
 using BMapr.WebApi.Controllers;
@@ -169,7 +170,7 @@ namespace BMapr.GDAL.WebApi.Controllers
         /// <returns></returns>
         [HttpGet("{project}/collections/{collectionId}/items")]
         [HttpHead("{project}/collections/{collectionId}/items")]
-        public ActionResult Feature(string project, string collectionId, [FromQuery] string? bbox, [FromQuery] string? query, [FromQuery] string f = "application/json", [FromQuery] int limit = 10)
+        public ActionResult Feature(string project, string collectionId, [FromQuery] string? bbox, [FromQuery] string? query, [FromQuery] string f = "application/json", [FromQuery] int limit = 10, [FromQuery] Boolean file = false)
         {
             // no alternate format supported
 
@@ -229,11 +230,16 @@ namespace BMapr.GDAL.WebApi.Controllers
 
             // todo checks for filter
 
-            // todo return value
-            OgcApiFeaturesService.Get(Config, project, collectionId, bboxDouble, query, limit, f);
+            var featureCollection = OgcApiFeaturesService.Get(Config, project, collectionId, bboxDouble, query, limit, f);
 
-            //todo add content
-            return Ok();
+            var content = JsonConvert.SerializeObject(featureCollection.Value);
+
+            if (file)
+            {
+                return new FileContentResult(Encoding.UTF8.GetBytes(content), "application/json") { FileDownloadName = $"{Guid.NewGuid()}.geojson" };
+            }
+
+            return new FileContentResult(Encoding.UTF8.GetBytes(content), "application/json");
         }
     }
 }

@@ -1,9 +1,5 @@
-﻿using Acornima.Ast;
-using BMapr.GDAL.WebApi.Models;
-using BMapr.GDAL.WebApi.Models.Spatial;
-using BMapr.GDAL.WebApi.Models.Spatial.Vector;
-using BMapr.GDAL.WebApi.Models.Tracking;
-using Microsoft.AspNetCore.Mvc;
+﻿using BMapr.GDAL.WebApi.Models;
+using BMapr.GDAL.WebApi.Models.Spatial.Vector2;
 using Newtonsoft.Json;
 using OSGeo.OGR;
 using Feature = OSGeo.OGR.Feature;
@@ -13,22 +9,20 @@ namespace BMapr.GDAL.WebApi.Services
     public static class OgcApiFeaturesService
     {
         // todo return value
-        public static void Get(Config config, string project, string collectionId, List<double> bbox, string query, int limit, string f)
+        public static Result<Models.Spatial.Vector2.FeatureCollection> Get(Config config, string project, string collectionId, List<double> bbox, string query, int limit, string f)
         {
             var mapMetadata = MapFileService.GetMapFromProject(project, config);
 
             if (!mapMetadata.Succesfully || string.IsNullOrEmpty(mapMetadata.Value.Key) || string.IsNullOrEmpty(mapMetadata.Value.FilePath))
             {
-                //_logger.LogError("error getting map metadata");
-                return;// new BadRequestResult();
+                return new Result<FeatureCollection>() { Value = null, Succesfully = false, Messages = new List<string>() { "Error getting map metadata" } };
             }
 
             var resultMapConfig = MapFileService.GetMapConfigFromCache(mapMetadata.Value.Key, mapMetadata.Value.FilePath, config, project);
 
             if (!resultMapConfig.Succesfully)
             {
-                //_logger.LogError("error getting map config");
-                return; // new BadRequestResult();
+                return new Result<FeatureCollection>(){Value = null, Succesfully = false, Messages = new List<string>(){"Config map not opened successfully"}};
             }
 
             var mapConfig = resultMapConfig.Value;
@@ -38,7 +32,10 @@ namespace BMapr.GDAL.WebApi.Services
 
             var dataSource = Ogr.Open(layerConfig.Connection, 0);
             var layerCount = dataSource.GetLayerCount();
-            var featureCollection = new FeatureCollection() { Type = "FeatureCollection" };
+            var featureCollection = new Models.Spatial.Vector2.FeatureCollection() { Type = "FeatureCollection" };
+
+            featureCollection.Name = collectionId;
+            featureCollection.Crs = new {Type = "name", Properties = new {Name = "urn:ogc:def:crs:EPSG::2056"}};
 
             for (int layerIndex = 0; layerIndex < layerCount; layerIndex++)
             {
@@ -70,18 +67,21 @@ namespace BMapr.GDAL.WebApi.Services
 
                     if (feature != null)
                     {
-                        var featureCls = new Models.Spatial.Vector.Feature() { Type = "Feature" };
+                        var featureCls = new Models.Spatial.Vector2.Feature() { Type = "Feature" };
 
                         var geometry = feature.GetGeometryRef();
+
+                        if (geometry == null)
+                        {
+                            //todo log
+                            continue;
+                        }
+
                         var geometryGeoJson = GeometryService.GetStringFromOgrGeometry(geometry, "geojson", false);
 
                         if (!string.IsNullOrEmpty(geometryGeoJson))
                         {
-                            featureCls.Geometry = new Models.Spatial.Vector.Geometry() { Type = "todo" };
-
-                            featureCls.Geometry.Coordinates = JsonConvert.DeserializeObject<dynamic>(geometryGeoJson)!;
-
-
+                            featureCls.Geometry = JsonConvert.DeserializeObject<dynamic>(geometryGeoJson)!;
                             featureCollection.Features.Add(featureCls);
                         }
 
@@ -95,7 +95,7 @@ namespace BMapr.GDAL.WebApi.Services
             dataSource.Dispose();
             // todo return value
 
-            return; //new OkObjectResult(null);
+            return new Result<FeatureCollection>(){Value = featureCollection, Succesfully = true};
         }
     }
 }
