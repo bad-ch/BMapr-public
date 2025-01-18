@@ -126,7 +126,9 @@ namespace BMapr.GDAL.WebApi.Controllers
                 }
             };
 
-            return Ok(JsonConvert.SerializeObject(landingPage));
+            var content = JsonConvert.SerializeObject(landingPage);
+
+            return new FileContentResult(Encoding.UTF8.GetBytes(content), "application/json");
         }
 
         /// <summary>
@@ -154,13 +156,18 @@ namespace BMapr.GDAL.WebApi.Controllers
 
             Config.Host = HostService.Get(Request, IConfig);
 
-            return Ok(new
+            var conformance = new
             {
-                conformsTo = new List<string>() {
+                conformsTo = new List<string>()
+                {
                     "http://www.opengis.net/spec/ogcapi-features-1/1.1/conf/core",
                     "http://www.opengis.net/spec/ogcapi-features-1/1.1/conf/geojson"
                 }
-            });
+            };
+
+            var content = JsonConvert.SerializeObject(conformance);
+
+            return new FileContentResult(Encoding.UTF8.GetBytes(content), "application/json");
         }
 
         /// <summary>
@@ -189,19 +196,52 @@ namespace BMapr.GDAL.WebApi.Controllers
             Config.Host = HostService.Get(Request, IConfig);
 
             var collections = new Collections();
+            var urlCollections = $"{Config.Host}/api/ogcapi/features/{project}/collections";
 
             collections.Links.Add(new Link()
             {
                 Rel = "self",
                 Title = "This document",
                 Type = "application/json",
-                Href = $"{Config.Host}/api/ogcapi/features/{project}/collections?f=application/json"
+                Href = $"{urlCollections}?f=application/json"
             });
 
-            var result = OgcApiFeaturesService.GetToc(Config, project, collections);
+            var result = OgcApiFeaturesService.GetToc(Config, project, collections, urlCollections);
             var content = JsonConvert.SerializeObject(result.Value);
 
-            return Ok(content);
+            return new FileContentResult(Encoding.UTF8.GetBytes(content), "application/json");
+        }
+
+        /// <summary>
+        /// Endpoint (GET) for feature/data page
+        /// </summary>
+        /// <param name="project"></param>
+        /// <returns></returns>
+        [HttpGet("{project}/collections/{collectionId}")]
+        [HttpHead("{project}/collections/{collectionId}")]
+        public ActionResult Collection(string project, string collectionId, [FromQuery] string f = "application/json")
+        {
+            // no alternate format supported
+
+            if (f.ToLower() != "application/json")
+            {
+                return BadRequest("OGC API format not supported");
+            }
+
+            var projectPath = Path.Combine(Config.DataProjects.FullName, project);
+
+            if (!System.IO.Directory.Exists(projectPath))
+            {
+                return BadRequest("OGC API project not found");
+            }
+
+            Config.Host = HostService.Get(Request, IConfig);
+
+            var urlCollections = $"{Config.Host}/api/ogcapi/features/{project}/collections";
+            var result = OgcApiFeaturesService.GetCollection(Config, project, collectionId, urlCollections);
+            var content = JsonConvert.SerializeObject(result.Value);
+
+            return new FileContentResult(Encoding.UTF8.GetBytes(content), "application/json");
         }
 
         /// <summary>

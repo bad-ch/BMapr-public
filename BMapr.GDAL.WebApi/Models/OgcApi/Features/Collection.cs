@@ -18,8 +18,11 @@ namespace BMapr.GDAL.WebApi.Models.OgcApi.Features
         [JsonPropertyName("extent")]
         public Extent Extent;
 
-        [JsonProperty("links")]
-        [JsonPropertyName("links")]
-        public List<Link> Links;
+        [JsonProperty("itemType")]
+        [JsonPropertyName("itemType")]
+        public string ItemType = "Feature";
+
+        [JsonProperty("links")] [JsonPropertyName("links")]
+        public List<Link> Links = new();
     }
 }

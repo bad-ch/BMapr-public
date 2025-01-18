@@ -11,7 +11,7 @@ namespace BMapr.GDAL.WebApi.Services
 {
     public static class OgcApiFeaturesService
     {
-        public static Result<Models.OgcApi.Features.Collections> GetToc(Config config, string project, Collections collections)
+        public static Result<Models.OgcApi.Features.Collections> GetToc(Config config, string project, Collections collections, string urlCollections)
         {
             var mapserverService = new MapserverService(config, project);
             var result = mapserverService.GetMetadata(mapserverService.Map);
@@ -26,25 +26,75 @@ namespace BMapr.GDAL.WebApi.Services
 
             var mapFile = JsonConvert.DeserializeObject<MapFile>(content);
 
-            mapFile.Layers.ForEach(item =>
+            mapFile?.Layers.ForEach(item =>
             {
-                var collection = new Collection()
-                {
-                    Id = item.Name,
-                    Title = item.Name, // todo introduce metadata tag
-                    Extent = new Extent()
-                    {
-                        Temporal = new Temporal(),
-                        Spatial = new Spatial()
-                        {
-                            //Crs = $"https://www.opengis.net/def/crs/EPSG/{item.pro}"
-                        }
-                    }
-                };
-                collections.CollectionList.Add(collection);
+                var resultCollection = GetCollectionItem(mapFile, item, urlCollections);
+                collections.CollectionList.Add(resultCollection.Value);
             });
 
             return new Result<Collections>(){Value = collections, Succesfully = true};
+        }
+
+        public static Result<Models.OgcApi.Features.Collection> GetCollection(Config config, string project, string collectionId, string urlCollections)
+        {
+            var mapserverService = new MapserverService(config, project);
+            var result = mapserverService.GetMetadata(mapserverService.Map);
+            var content = JsonConvert.SerializeObject(
+                result,
+                Formatting.None,
+                new JsonSerializerSettings()
+                {
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+                }
+            );
+
+            var mapFile = JsonConvert.DeserializeObject<MapFile>(content);
+            var collection = new Collection();
+
+            mapFile?.Layers.ForEach(item =>
+            {
+                if (item.Name != collectionId)
+                {
+                    return;
+                }
+
+                var resultCollection = GetCollectionItem(mapFile, item, urlCollections);
+                collection = resultCollection.Value;
+            });
+
+            return new Result<Collection>() { Value = collection, Succesfully = true };
+        }
+
+        private static Result<Models.OgcApi.Features.Collection> GetCollectionItem(MapFile mapFile, Models.MapFile.Layer item, string urlCollections)
+        {
+            var collection = new Collection()
+            {
+                Id = item.Name,
+                Title = item.Name, // todo introduce metadata tag
+                Extent = new Extent()
+                {
+                    Temporal = new Temporal(),
+                    Spatial = new Spatial()
+                    {
+                        Crs = $"https://www.opengis.net/def/crs/EPSG/{item.Metadata.MshEPSG}" // todo projection is not available ??
+                    }
+                }
+            };
+
+            if (item.Extent.Minx > 0)
+            {
+                collection.Extent.Spatial.Bbox.Add(new List<double>() { item.Extent.Minx, item.Extent.Miny, item.Extent.Maxx, item.Extent.Maxy });
+            }
+            else
+            {
+                collection.Extent.Spatial.Bbox.Add(new List<double>() { mapFile.Extent.Minx, mapFile.Extent.Miny, mapFile.Extent.Maxx, mapFile.Extent.Maxy });
+            }
+
+            collection.Links.Add(new Link() { Rel = "self", Title = "This collection", Type = "application/json", Href = $"{urlCollections}/{item.Name}" });
+            collection.Links.Add(new Link() { Rel = "items", Title = $"{item.Name} as GeoJSON", Type = "application/json", Href = $"{urlCollections}/{item.Name}/items?f=application/json" });
+            //collection.Links.Add(new Link() { Rel = "describedby", Title = $"Schema for {item.Name}", Type = "application/json", Href = $"{urlCollections}/{item.Name}/schema?f=application/json" });
+
+            return new Result<Collection>(){Value = collection, Succesfully = true};
         }
 
         // todo return value
