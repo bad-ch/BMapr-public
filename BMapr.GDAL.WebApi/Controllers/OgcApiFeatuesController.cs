@@ -164,6 +164,37 @@ namespace BMapr.GDAL.WebApi.Controllers
         }
 
         /// <summary>
+        /// Endpoint (GET) collections page
+        /// </summary>
+        /// <param name="project"></param>
+        /// <returns></returns>
+        [HttpGet("{project}/collections")]
+        [HttpHead("{project}/collections")]
+        public ActionResult Collections(string project, [FromQuery] string f = "application/json")
+        {
+            // no alternate format supported
+
+            if (f.ToLower() != "application/json")
+            {
+                return BadRequest("OGC API format not supported");
+            }
+
+            var projectPath = Path.Combine(Config.DataProjects.FullName, project);
+
+            if (!System.IO.Directory.Exists(projectPath))
+            {
+                return BadRequest("OGC API project not found");
+            }
+
+            Config.Host = HostService.Get(Request, IConfig);
+
+            OgcApiFeaturesService.GetToc(Config, project);
+
+            // todo add content
+            return Ok();
+        }
+
+        /// <summary>
         /// Endpoint (GET) for feature/data page
         /// </summary>
         /// <param name="project"></param>

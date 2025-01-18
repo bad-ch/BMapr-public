@@ -1,4 +1,5 @@
 ﻿using BMapr.GDAL.WebApi.Models;
+using BMapr.GDAL.WebApi.Models.MapFile;
 using BMapr.GDAL.WebApi.Models.Spatial.Vector2;
 using Newtonsoft.Json;
 using OSGeo.OGR;
@@ -8,6 +9,24 @@ namespace BMapr.GDAL.WebApi.Services
 {
     public static class OgcApiFeaturesService
     {
+        public static Result<Models.OgcApi.Features.Collections> GetToc(Config config, string project)
+        {
+            var mapserverService = new MapserverService(config, project);
+            var result = mapserverService.GetMetadata(mapserverService.Map);
+            var content = JsonConvert.SerializeObject(
+                result,
+                Formatting.None,
+                new JsonSerializerSettings()
+                {
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+                }
+            );
+
+            var mapFile = JsonConvert.DeserializeObject<MapFile>(content);
+
+            return null;
+        }
+
         // todo return value
         public static Result<Models.Spatial.Vector2.FeatureCollection> Get(Config config, string project, string collectionId, List<double> bbox, string query, int limit, string f)
         {
