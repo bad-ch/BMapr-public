@@ -7,10 +7,10 @@ namespace BMapr.GDAL.WebApi.Models.OgcApi.Features
     {
         [JsonProperty("interval")]
         [JsonPropertyName("interval")]
-        public List<List<DateTime>> Interval;
+        public List<List<DateTime>> Interval = new ();
 
         [JsonProperty("trs")]
         [JsonPropertyName("trs")]
-        public string Trs;
+        public string Trs = string.Empty;
     }
 }

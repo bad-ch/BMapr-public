@@ -7,10 +7,10 @@ namespace BMapr.GDAL.WebApi.Models.OgcApi.Features
     {
         [JsonProperty("links")]
         [JsonPropertyName("links")]
-        public List<Link> Links;
+        public List<Link> Links = new();
 
         [JsonProperty("collections")]
         [JsonPropertyName("collections")]
-        public List<Collection> CollectionList;
+        public List<Collection> CollectionList = new ();
     }
 }

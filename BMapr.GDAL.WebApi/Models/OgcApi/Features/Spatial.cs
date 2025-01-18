@@ -7,10 +7,10 @@ namespace BMapr.GDAL.WebApi.Models.OgcApi.Features
     {
         [JsonProperty("bbox")]
         [JsonPropertyName("bbox")]
-        public List<List<double>> Bbox;
+        public List<List<double>> Bbox = new ();
 
         [JsonProperty("crs")]
         [JsonPropertyName("crs")]
-        public string Crs;
+        public string Crs = string.Empty;
     }
 }

@@ -1,15 +1,17 @@
 ﻿using BMapr.GDAL.WebApi.Models;
 using BMapr.GDAL.WebApi.Models.MapFile;
+using BMapr.GDAL.WebApi.Models.OgcApi.Features;
 using BMapr.GDAL.WebApi.Models.Spatial.Vector2;
 using Newtonsoft.Json;
 using OSGeo.OGR;
+using Extent = BMapr.GDAL.WebApi.Models.OgcApi.Features.Extent;
 using Feature = OSGeo.OGR.Feature;
 
 namespace BMapr.GDAL.WebApi.Services
 {
     public static class OgcApiFeaturesService
     {
-        public static Result<Models.OgcApi.Features.Collections> GetToc(Config config, string project)
+        public static Result<Models.OgcApi.Features.Collections> GetToc(Config config, string project, Collections collections)
         {
             var mapserverService = new MapserverService(config, project);
             var result = mapserverService.GetMetadata(mapserverService.Map);
@@ -24,7 +26,25 @@ namespace BMapr.GDAL.WebApi.Services
 
             var mapFile = JsonConvert.DeserializeObject<MapFile>(content);
 
-            return null;
+            mapFile.Layers.ForEach(item =>
+            {
+                var collection = new Collection()
+                {
+                    Id = item.Name,
+                    Title = item.Name, // todo introduce metadata tag
+                    Extent = new Extent()
+                    {
+                        Temporal = new Temporal(),
+                        Spatial = new Spatial()
+                        {
+                            //Crs = $"https://www.opengis.net/def/crs/EPSG/{item.pro}"
+                        }
+                    }
+                };
+                collections.CollectionList.Add(collection);
+            });
+
+            return new Result<Collections>(){Value = collections, Succesfully = true};
         }
 
         // todo return value

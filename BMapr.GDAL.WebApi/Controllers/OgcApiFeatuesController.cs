@@ -188,10 +188,20 @@ namespace BMapr.GDAL.WebApi.Controllers
 
             Config.Host = HostService.Get(Request, IConfig);
 
-            OgcApiFeaturesService.GetToc(Config, project);
+            var collections = new Collections();
 
-            // todo add content
-            return Ok();
+            collections.Links.Add(new Link()
+            {
+                Rel = "self",
+                Title = "This document",
+                Type = "application/json",
+                Href = $"{Config.Host}/api/ogcapi/features/{project}/collections?f=application/json"
+            });
+
+            var result = OgcApiFeaturesService.GetToc(Config, project, collections);
+            var content = JsonConvert.SerializeObject(result.Value);
+
+            return Ok(content);
         }
 
         /// <summary>
