@@ -276,7 +276,7 @@ namespace BMapr.GDAL.WebApi.Controllers
 
             Config.Host = HostService.Get(Request, IConfig);
 
-            var mapserverService = new MapserverService(_cache, Config, project);
+            var mapserverService = new MapserverService(Config, project);
             var result = mapserverService.GetMetadata(mapserverService.Map);
 
             result["projectGuid"] = project;
