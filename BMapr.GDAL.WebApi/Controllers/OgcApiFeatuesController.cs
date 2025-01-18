@@ -251,6 +251,7 @@ namespace BMapr.GDAL.WebApi.Controllers
         /// <returns></returns>
         [HttpGet("{project}/collections/{collectionId}/items")]
         [HttpHead("{project}/collections/{collectionId}/items")]
+        [HttpOptions("{project}/collections/{collectionId}/items")]
         public ActionResult Feature(string project, string collectionId, [FromQuery] string? bbox, [FromQuery] string? query, [FromQuery] string f = "application/json", [FromQuery] int limit = 10, [FromQuery] Boolean file = false)
         {
             // no alternate format supported
