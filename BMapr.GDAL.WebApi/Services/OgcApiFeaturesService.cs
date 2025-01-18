@@ -76,7 +76,7 @@ namespace BMapr.GDAL.WebApi.Services
                     Temporal = new Temporal(),
                     Spatial = new Spatial()
                     {
-                        Crs = $"https://www.opengis.net/def/crs/EPSG/{item.Metadata.MshEPSG}" // todo projection is not available ??
+                        Crs = $"https://www.opengis.net/def/crs/EPSG/0/{item.Metadata.MshEPSG}" // todo projection is not available ??
                     }
                 }
             };
