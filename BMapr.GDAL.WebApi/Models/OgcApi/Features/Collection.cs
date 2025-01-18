@@ -22,6 +22,14 @@ namespace BMapr.GDAL.WebApi.Models.OgcApi.Features
         [JsonPropertyName("itemType")]
         public string ItemType = "Feature";
 
+        [JsonProperty("crs")]
+        [JsonPropertyName("crs")]
+        public List<string> Crs = new ();
+
+        [JsonProperty("storageCrs")]
+        [JsonPropertyName("storageCrs")]
+        public string StorageCrs;
+
         [JsonProperty("links")] [JsonPropertyName("links")]
         public List<Link> Links = new();
     }

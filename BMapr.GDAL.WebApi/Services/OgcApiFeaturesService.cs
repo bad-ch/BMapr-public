@@ -76,22 +76,25 @@ namespace BMapr.GDAL.WebApi.Services
                     Temporal = new Temporal(),
                     Spatial = new Spatial()
                     {
-                        Crs = $"https://www.opengis.net/def/crs/EPSG/0/{item.Metadata.MshEPSG}" // todo projection is not available ??
+                        Crs = "http://www.opengis.net/def/crs/OGC/1.3/CRS84" //$"http://www.opengis.net/def/crs/EPSG/0/{item.Metadata.MshEPSG}" // todo projection is not available ??
                     }
                 }
             };
 
+            collection.StorageCrs = "http://www.opengis.net/def/crs/OGC/1.3/CRS84"; //$"http://www.opengis.net/def/crs/EPSG/0/{item.Metadata.MshEPSG}";
+            collection.Crs.Add("http://www.opengis.net/def/crs/OGC/1.3/CRS84"); //$"http://www.opengis.net/def/crs/EPSG/0/{item.Metadata.MshEPSG}");
+
             if (item.Extent.Minx > 0)
             {
-                collection.Extent.Spatial.Bbox.Add(new List<double>() { item.Extent.Minx, item.Extent.Miny, item.Extent.Maxx, item.Extent.Maxy });
+                collection.Extent.Spatial.Bbox.Add(new List<double>() { 5.96, 45.82, 10.49, 47.81}); //item.Extent.Minx, item.Extent.Miny, item.Extent.Maxx, item.Extent.Maxy });
             }
             else
             {
-                collection.Extent.Spatial.Bbox.Add(new List<double>() { mapFile.Extent.Minx, mapFile.Extent.Miny, mapFile.Extent.Maxx, mapFile.Extent.Maxy });
+                collection.Extent.Spatial.Bbox.Add(new List<double>() {5.96, 45.82, 10.49, 47.81}); //mapFile.Extent.Minx, mapFile.Extent.Miny, mapFile.Extent.Maxx, mapFile.Extent.Maxy });
             }
 
             collection.Links.Add(new Link() { Rel = "self", Title = "This collection", Type = "application/json", Href = $"{urlCollections}/{item.Name}" });
-            collection.Links.Add(new Link() { Rel = "items", Title = $"{item.Name} as GeoJSON", Type = "application/json", Href = $"{urlCollections}/{item.Name}/items?f=application/json" });
+            collection.Links.Add(new Link() { Rel = "items", Title = $"{item.Name} as GeoJSON", Type = "application/geo+json", Href = $"{urlCollections}/{item.Name}/items?f=geojson" });
             //collection.Links.Add(new Link() { Rel = "describedby", Title = $"Schema for {item.Name}", Type = "application/json", Href = $"{urlCollections}/{item.Name}/schema?f=application/json" });
 
             return new Result<Collection>(){Value = collection, Succesfully = true};
@@ -124,7 +127,7 @@ namespace BMapr.GDAL.WebApi.Services
             var featureCollection = new Models.Spatial.Vector2.FeatureCollection() { Type = "FeatureCollection" };
 
             featureCollection.Name = collectionId;
-            featureCollection.Crs = new {Type = "name", Properties = new {Name = "urn:ogc:def:crs:EPSG::2056"}};
+            featureCollection.Crs = "http://www.opengis.net/def/crs/OGC/1.3/CRS84"; //"http://www.opengis.net/def/crs/EPSG/0/2056";
 
             for (int layerIndex = 0; layerIndex < layerCount; layerIndex++)
             {
@@ -149,10 +152,16 @@ namespace BMapr.GDAL.WebApi.Services
                 var featureCountFiltered = layer.GetFeatureCount(1);
 
                 Feature feature;
+                long i = 0;
 
                 do
                 {
                     feature = layer.GetNextFeature();
+
+                    if (i > 100)
+                    {
+                        continue;
+                    }
 
                     if (feature != null)
                     {
@@ -160,11 +169,24 @@ namespace BMapr.GDAL.WebApi.Services
 
                         var geometry = feature.GetGeometryRef();
 
+                        var sourceCrs = new OSGeo.OSR.SpatialReference("");
+                        sourceCrs.ImportFromEPSG(2056);
+
+                        var targetCrs = new OSGeo.OSR.SpatialReference("");
+                        targetCrs.ImportFromEPSG(4326);
+
+                        var coordTrans = new OSGeo.OSR.CoordinateTransformation(sourceCrs, targetCrs);
+
+                        geometry.Transform(coordTrans);
+
                         if (geometry == null)
                         {
                             //todo log
                             continue;
                         }
+
+                        i++;
+                        featureCls.Id = $"{i}";
 
                         var geometryGeoJson = GeometryService.GetStringFromOgrGeometry(geometry, "geojson", false);
 
@@ -177,6 +199,8 @@ namespace BMapr.GDAL.WebApi.Services
                     }
 
                 } while (feature != null);
+
+                featureCollection.NumberReturned = i;
 
                 layer.Dispose();
             }

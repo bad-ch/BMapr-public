@@ -252,11 +252,11 @@ namespace BMapr.GDAL.WebApi.Controllers
         [HttpGet("{project}/collections/{collectionId}/items")]
         [HttpHead("{project}/collections/{collectionId}/items")]
         [HttpOptions("{project}/collections/{collectionId}/items")]
-        public ActionResult Feature(string project, string collectionId, [FromQuery] string? bbox, [FromQuery] string? query, [FromQuery] string f = "application/json", [FromQuery] int limit = 10, [FromQuery] Boolean file = false)
+        public ActionResult Feature(string project, string collectionId, [FromQuery] string? bbox, [FromQuery] string? query, [FromQuery] string f = "geojson", [FromQuery] int limit = 10, [FromQuery] Boolean file = false)
         {
             // no alternate format supported
 
-            if (f.ToLower() != "application/json")
+            if (f.ToLower() != "geojson")
             {
                 return BadRequest("OGC API format not supported");
             }
@@ -318,10 +318,12 @@ namespace BMapr.GDAL.WebApi.Controllers
 
             if (file)
             {
-                return new FileContentResult(Encoding.UTF8.GetBytes(content), "application/json") { FileDownloadName = $"{Guid.NewGuid()}.geojson" };
+                return new FileContentResult(Encoding.UTF8.GetBytes(content), "application/geo+json") { FileDownloadName = $"{Guid.NewGuid()}.geojson" };
             }
 
-            return new FileContentResult(Encoding.UTF8.GetBytes(content), "application/json");
+            Response.Headers.Add("Content-Crs", featureCollection.Value.Crs);
+            
+            return new FileContentResult(Encoding.UTF8.GetBytes(content), "application/geo+json");
         }
     }
 }

@@ -7,11 +7,14 @@ namespace BMapr.GDAL.WebApi.Models.Spatial.Vector2
         [JsonProperty(PropertyName = "type")]
         public String Type = "Feature";
 
+        [JsonProperty(PropertyName = "id")]
+        public string Id;
+
         [JsonProperty(PropertyName = "geometry")]
         public object Geometry;
 
         [JsonProperty(PropertyName = "properties")]
-        public Dictionary<string, object> Properties;
+        public Dictionary<string, object> Properties = null;
 
         public Feature()
         {
