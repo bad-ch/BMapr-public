@@ -1,11 +1,11 @@
 ﻿using Newtonsoft.Json;
 
-namespace BMapr.GDAL.WebApi.Models.Spatial.Vector2
+namespace BMapr.GDAL.WebApi.Models.OgcApi.Features
 {
     public class Feature
     {
         [JsonProperty(PropertyName = "type")]
-        public String Type = "Feature";
+        public string Type = "Feature";
 
         [JsonProperty(PropertyName = "id")]
         public string Id;
@@ -27,9 +27,9 @@ namespace BMapr.GDAL.WebApi.Models.Spatial.Vector2
             {
                 string value = fieldQuery.Value;
 
-                foreach (var property in this.Properties)
+                foreach (var property in Properties)
                 {
-                    value = value.Replace(String.Format("#{0}#", property.Key), property.Value.ToString());
+                    value = value.Replace(string.Format("#{0}#", property.Key), property.Value.ToString());
                 }
 
                 if (!Properties.ContainsKey(fieldQuery.Key))

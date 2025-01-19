@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace BMapr.GDAL.WebApi.Models.Spatial.Vector2
+namespace BMapr.GDAL.WebApi.Models.OgcApi.Features
 {
     public class FeatureCollection
     {

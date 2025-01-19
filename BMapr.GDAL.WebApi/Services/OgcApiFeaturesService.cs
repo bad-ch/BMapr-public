@@ -1,7 +1,6 @@
 ﻿using BMapr.GDAL.WebApi.Models;
 using BMapr.GDAL.WebApi.Models.MapFile;
 using BMapr.GDAL.WebApi.Models.OgcApi.Features;
-using BMapr.GDAL.WebApi.Models.Spatial.Vector2;
 using Newtonsoft.Json;
 using OSGeo.OGR;
 using Extent = BMapr.GDAL.WebApi.Models.OgcApi.Features.Extent;
@@ -101,7 +100,7 @@ namespace BMapr.GDAL.WebApi.Services
         }
 
         // todo return value
-        public static Result<Models.Spatial.Vector2.FeatureCollection> Get(Config config, string project, string collectionId, List<double> bbox, string query, int limit, string f)
+        public static Result<FeatureCollection> Get(Config config, string project, string collectionId, List<double> bbox, string query, int limit, string f)
         {
             var mapMetadata = MapFileService.GetMapFromProject(project, config);
 
@@ -124,7 +123,7 @@ namespace BMapr.GDAL.WebApi.Services
 
             var dataSource = Ogr.Open(layerConfig.Connection, 0);
             var layerCount = dataSource.GetLayerCount();
-            var featureCollection = new Models.Spatial.Vector2.FeatureCollection() { Type = "FeatureCollection" };
+            var featureCollection = new FeatureCollection() { Type = "FeatureCollection" };
 
             featureCollection.Name = collectionId;
             featureCollection.Crs = "http://www.opengis.net/def/crs/OGC/1.3/CRS84"; //"http://www.opengis.net/def/crs/EPSG/0/2056";
@@ -165,7 +164,7 @@ namespace BMapr.GDAL.WebApi.Services
 
                     if (feature != null)
                     {
-                        var featureCls = new Models.Spatial.Vector2.Feature() { Type = "Feature" };
+                        var featureCls = new Models.OgcApi.Features.Feature() { Type = "Feature" };
 
                         var geometry = feature.GetGeometryRef();
 
