@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
+using Newtonsoft.Json;
 
 namespace BMapr.GDAL.WebApi.Models.OgcApi.Features
 {
@@ -6,6 +7,10 @@ namespace BMapr.GDAL.WebApi.Models.OgcApi.Features
     {
         [JsonProperty(PropertyName = "type")]
         public string Type = "FeatureCollection";
+
+        [JsonProperty("links")]
+        [JsonPropertyName("links")]
+        public List<Link> Links = new();                    // todo for example if you have limit and offset show here the next range
 
         [JsonProperty(PropertyName = "name")]
         public string Name;

@@ -14,7 +14,7 @@ namespace BMapr.GDAL.WebApi.Models.OgcApi.Features
         public object Geometry;
 
         [JsonProperty(PropertyName = "properties")]
-        public Dictionary<string, object> Properties = null;
+        public Dictionary<string, object>? Properties = null;
 
         public Feature()
         {

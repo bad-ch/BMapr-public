@@ -247,23 +247,29 @@ namespace BMapr.GDAL.WebApi.Controllers
         /// <summary>
         /// Endpoint (GET) for feature/data page
         /// </summary>
-        /// <param name="project"></param>
+        /// <param name="project">name of project</param>
+        /// <param name="collectionId">name of feature</param>
+        /// <param name="bbox">envelope of the wished area</param>
+        /// <param name="bboxCrs">CRS from the bbox if differnt from default</param>
+        /// <param name="query">query of attributes</param>
+        /// <param name="offset">paging start offset to skip</param>
+        /// <param name="limit">page size</param>
+        /// <param name="f">format of the queried data</param>
+        /// <param name="file">download data as file</param>
         /// <returns></returns>
         [HttpGet("{project}/collections/{collectionId}/items")]
         [HttpHead("{project}/collections/{collectionId}/items")]
         [HttpOptions("{project}/collections/{collectionId}/items")]
-        public ActionResult Feature(string project, string collectionId, [FromQuery] string? bbox, [FromQuery] string? query, [FromQuery] string f = "geojson", [FromQuery] int limit = 10, [FromQuery] Boolean file = false)
+        public ActionResult Feature(string project, string collectionId, [FromQuery] string? bbox, [FromQuery] string? bboxCrs, [FromQuery] string? query, [FromQuery] int? offset, [FromQuery] int? limit, [FromQuery] string f = "geojson", [FromQuery] bool file = false)
         {
-            // no alternate format supported
-
             if (f.ToLower() != "geojson")
             {
                 return BadRequest("OGC API format not supported");
             }
 
-            var projectPath = Path.Combine(Config.DataProjects.FullName, project);
+            var projectPath = Path.Combine(Config.DataProjects!.FullName, project);
 
-            if (!System.IO.Directory.Exists(projectPath))
+            if (!Directory.Exists(projectPath))
             {
                 return BadRequest("OGC API project not found");
             }
@@ -276,9 +282,14 @@ namespace BMapr.GDAL.WebApi.Controllers
                 return BadRequest("OGC API collection id is empty");
             }
 
-            if (!(limit > 0 && limit < 100000)) // max specification 10'000
+            if (limit != null && (limit < 0 || limit > 100000)) // max specification 10'000
             {
-                return BadRequest("OGC API limit has to be between 1 and 100'000");
+                return BadRequest("OGC API if set limit has to be between 1 and 100'000");
+            }
+
+            if (offset != null && (offset < 0 || offset > 100000)) // max specification 10'000
+            {
+                return BadRequest("OGC API if set offset has to be between 1 and 100'000");
             }
 
             var bboxDouble = new List<double>();
@@ -312,7 +323,7 @@ namespace BMapr.GDAL.WebApi.Controllers
 
             // todo checks for filter
 
-            var featureCollection = OgcApiFeaturesService.Get(Config, project, collectionId, bboxDouble, query, limit, f);
+            var featureCollection = OgcApiFeaturesService.GetItems(Config, project, collectionId, bboxDouble, bboxCrs, query, offset,limit, f);
 
             var content = JsonConvert.SerializeObject(featureCollection.Value);
 
@@ -321,7 +332,7 @@ namespace BMapr.GDAL.WebApi.Controllers
                 return new FileContentResult(Encoding.UTF8.GetBytes(content), "application/geo+json") { FileDownloadName = $"{Guid.NewGuid()}.geojson" };
             }
 
-            Response.Headers.Add("Content-Crs", featureCollection.Value.Crs);
+            Response.Headers.Append("Content-Crs", featureCollection.Value.Crs);
             
             return new FileContentResult(Encoding.UTF8.GetBytes(content), "application/geo+json");
         }

@@ -100,7 +100,7 @@ namespace BMapr.GDAL.WebApi.Services
         }
 
         // todo return value
-        public static Result<FeatureCollection> Get(Config config, string project, string collectionId, List<double> bbox, string query, int limit, string f)
+        public static Result<FeatureCollection> GetItems(Config config, string project, string collectionId, List<double> bbox, string? bboxCrs, string query, int? offset, int? limit, string f)
         {
             var mapMetadata = MapFileService.GetMapFromProject(project, config);
 
