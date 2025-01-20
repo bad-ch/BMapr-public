@@ -124,23 +124,38 @@ namespace BMapr.GDAL.WebApi.Services
             var dataSource = Ogr.Open(layerConfig.Connection, 0);
             var layerCount = dataSource.GetLayerCount();
             var featureCollection = new FeatureCollection() { Type = "FeatureCollection" };
+            var result = new Result<FeatureCollection>();
 
             featureCollection.Name = collectionId;
             featureCollection.Crs = "http://www.opengis.net/def/crs/OGC/1.3/CRS84"; //"http://www.opengis.net/def/crs/EPSG/0/2056";
 
             for (int layerIndex = 0; layerIndex < layerCount; layerIndex++)
             {
-                var layer = dataSource.GetLayerByIndex(layerIndex);
-
                 //if (layer.GetName() != collectionId)
                 //{
-                //    // skip layer
                 //    continue;
                 //}
 
+                var layer = dataSource.GetLayerByIndex(layerIndex);
+                var featureCount = layer.GetFeatureCount(1);
+                result.Messages.Add($"feature count {featureCount}");
+
                 if (bbox.Count > 0)
                 {
-                    //layer.SetSpatialFilter();
+                    // todo bbox-crs
+
+                    if (bbox.Count == 4)
+                    {
+                        layer.SetSpatialFilter(Geometry.CreateFromWkt($"POLYGON(({bbox[0]} {bbox[1]}, {bbox[2]} {bbox[1]},{bbox[2]} {bbox[3]}, {bbox[0]} {bbox[3]}, {bbox[0]} {bbox[1]}))"));
+                    }
+                    else if (bbox.Count == 6)
+                    {
+                        layer.SetSpatialFilter(Geometry.CreateFromWkt($"POLYGON(({bbox[0]} {bbox[1]}, {bbox[3]} {bbox[1]},{bbox[3]} {bbox[4]}, {bbox[0]} {bbox[4]}, {bbox[0]} {bbox[1]}))"));
+                    }
+                    else
+                    {
+                        result.Messages.Add("Ignore spatial filter because bbox is invalid");
+                    }
                 }
 
                 if (!string.IsNullOrEmpty(query))
@@ -149,24 +164,47 @@ namespace BMapr.GDAL.WebApi.Services
                 }
 
                 var featureCountFiltered = layer.GetFeatureCount(1);
+                result.Messages.Add($"feature count with filter {featureCountFiltered}");
 
                 Feature feature;
                 long i = 0;
+                long j = 0;
+                long limitCount = 0;
 
                 do
                 {
                     feature = layer.GetNextFeature();
 
-                    if (i > 100)
-                    {
-                        continue;
-                    }
-
                     if (feature != null)
                     {
-                        var featureCls = new Models.OgcApi.Features.Feature() { Type = "Feature" };
+                        i++;
 
+                        if (offset != null && i <= offset)
+                        {
+                            continue;
+                        }
+
+                        if (limit != 0 && limitCount >= limit)
+                        {
+                            continue;
+                        }
+
+                        if (limit != null)
+                        {
+                            limitCount++;
+                        }
+
+                        var featureCls = new Models.OgcApi.Features.Feature() { Type = "Feature" };
                         var geometry = feature.GetGeometryRef();
+
+                        if (geometry == null)
+                        {
+                            //todo log
+                            continue;
+                        }
+
+                        // *********************************************************************************************************************
+                        // transformation back to wgs 84
 
                         var sourceCrs = new OSGeo.OSR.SpatialReference("");
                         sourceCrs.ImportFromEPSG(2056);
@@ -178,19 +216,16 @@ namespace BMapr.GDAL.WebApi.Services
 
                         geometry.Transform(coordTrans);
 
-                        if (geometry == null)
-                        {
-                            //todo log
-                            continue;
-                        }
+                        // *********************************************************************************************************************
 
-                        i++;
-                        featureCls.Id = $"{i}";
+
+                        featureCls.Id = $"{feature.GetFID()}";
 
                         var geometryGeoJson = GeometryService.GetStringFromOgrGeometry(geometry, "geojson", false);
 
                         if (!string.IsNullOrEmpty(geometryGeoJson))
                         {
+                            j++;
                             featureCls.Geometry = JsonConvert.DeserializeObject<dynamic>(geometryGeoJson)!;
                             featureCollection.Features.Add(featureCls);
                         }
@@ -199,15 +234,17 @@ namespace BMapr.GDAL.WebApi.Services
 
                 } while (feature != null);
 
-                featureCollection.NumberReturned = i;
+                featureCollection.NumberReturned = j;
 
                 layer.Dispose();
             }
 
             dataSource.Dispose();
-            // todo return value
 
-            return new Result<FeatureCollection>(){Value = featureCollection, Succesfully = true};
+            result.Value = featureCollection;
+            result.Succesfully = true;
+
+            return result;
         }
     }
 }
