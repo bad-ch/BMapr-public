@@ -1,0 +1,313 @@
+﻿using BMapr.GDAL.WebApi.Models;
+using BMapr.GDAL.WebApi.Models.MapFile;
+using BMapr.GDAL.WebApi.Models.OgcApi.Features;
+using Newtonsoft.Json;
+using OSGeo.OGR;
+using Extent = BMapr.GDAL.WebApi.Models.OgcApi.Features.Extent;
+using Feature = OSGeo.OGR.Feature;
+
+namespace BMapr.GDAL.WebApi.Services
+{
+    public static class OgcApiFeaturesService
+    {
+        public static Result<Models.OgcApi.Features.Collections> GetToc(Config config, string project, Collections collections, string urlCollections)
+        {
+            var mapserverService = new MapserverService(config, project);
+            var result = mapserverService.GetMetadata(mapserverService.Map);
+            var content = JsonConvert.SerializeObject(
+                result,
+                Formatting.None,
+                new JsonSerializerSettings()
+                {
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+                }
+            );
+
+            var mapFile = JsonConvert.DeserializeObject<MapFile>(content);
+
+            mapFile?.Layers.ForEach(item =>
+            {
+                var resultCollection = GetCollectionItem(mapFile, item, urlCollections);
+                collections.CollectionList.Add(resultCollection.Value);
+            });
+
+            return new Result<Collections>(){Value = collections, Succesfully = true};
+        }
+
+        public static Result<Models.OgcApi.Features.Collection> GetCollection(Config config, string project, string collectionId, string urlCollections)
+        {
+            var mapserverService = new MapserverService(config, project);
+            var result = mapserverService.GetMetadata(mapserverService.Map);
+            var content = JsonConvert.SerializeObject(
+                result,
+                Formatting.None,
+                new JsonSerializerSettings()
+                {
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+                }
+            );
+
+            var mapFile = JsonConvert.DeserializeObject<MapFile>(content);
+            var collection = new Collection();
+
+            mapFile?.Layers.ForEach(item =>
+            {
+                if (item.Name != collectionId)
+                {
+                    return;
+                }
+
+                var resultCollection = GetCollectionItem(mapFile, item, urlCollections);
+                collection = resultCollection.Value;
+            });
+
+            return new Result<Collection>() { Value = collection, Succesfully = true };
+        }
+
+        private static Result<Models.OgcApi.Features.Collection> GetCollectionItem(MapFile mapFile, Models.MapFile.Layer item, string urlCollections)
+        {
+            var collection = new Collection()
+            {
+                Id = item.Name,
+                Title = item.Name, // todo introduce metadata tag
+                Extent = new Extent()
+                {
+                    Temporal = new Temporal(),
+                    Spatial = new Spatial()
+                    {
+                        Crs = "http://www.opengis.net/def/crs/OGC/1.3/CRS84" //$"http://www.opengis.net/def/crs/EPSG/0/{item.Metadata.MshEPSG}" // todo projection is not available ??
+                    }
+                }
+            };
+
+            collection.StorageCrs = "http://www.opengis.net/def/crs/OGC/1.3/CRS84"; //$"http://www.opengis.net/def/crs/EPSG/0/{item.Metadata.MshEPSG}";
+            collection.Crs.Add("http://www.opengis.net/def/crs/OGC/1.3/CRS84"); //$"http://www.opengis.net/def/crs/EPSG/0/{item.Metadata.MshEPSG}");
+
+            if (item.Extent.Minx > 0)
+            {
+                collection.Extent.Spatial.Bbox.Add(new List<double>() { 5.96, 45.82, 10.49, 47.81}); //item.Extent.Minx, item.Extent.Miny, item.Extent.Maxx, item.Extent.Maxy });
+            }
+            else
+            {
+                collection.Extent.Spatial.Bbox.Add(new List<double>() {5.96, 45.82, 10.49, 47.81}); //mapFile.Extent.Minx, mapFile.Extent.Miny, mapFile.Extent.Maxx, mapFile.Extent.Maxy });
+            }
+
+            collection.Links.Add(new Link() { Rel = "self", Title = "This collection", Type = "application/json", Href = $"{urlCollections}/{item.Name}" });
+            collection.Links.Add(new Link() { Rel = "items", Title = $"{item.Name} as GeoJSON", Type = "application/geo+json", Href = $"{urlCollections}/{item.Name}/items?f=geojson" });
+            //collection.Links.Add(new Link() { Rel = "describedby", Title = $"Schema for {item.Name}", Type = "application/json", Href = $"{urlCollections}/{item.Name}/schema?f=application/json" });
+
+            return new Result<Collection>(){Value = collection, Succesfully = true};
+        }
+
+        // todo return value
+        public static Result<FeatureCollection> GetItems(Config config, string project, string collectionId, List<double> bbox, string? bboxCrs, string query, int? offset, int? limit, string f)
+        {
+            var mapMetadata = MapFileService.GetMapFromProject(project, config);
+
+            if (!mapMetadata.Succesfully || string.IsNullOrEmpty(mapMetadata.Value.Key) || string.IsNullOrEmpty(mapMetadata.Value.FilePath))
+            {
+                return new Result<FeatureCollection>() { Value = null, Succesfully = false, Messages = new List<string>() { "Error getting map metadata" } };
+            }
+
+            var resultMapConfig = MapFileService.GetMapConfigFromCache(mapMetadata.Value.Key, mapMetadata.Value.FilePath, config, project);
+
+            if (!resultMapConfig.Succesfully)
+            {
+                return new Result<FeatureCollection>(){Value = null, Succesfully = false, Messages = new List<string>(){"Config map not opened successfully"}};
+            }
+
+            var mapConfig = resultMapConfig.Value;
+            var layerConfig = mapConfig.GetLayerConfig(collectionId);
+
+            GdalConfiguration.ConfigureOgr();
+
+            var dataSource = Ogr.Open(layerConfig.Connection, 0);
+            var layerCount = dataSource.GetLayerCount();
+            var featureCollection = new FeatureCollection() { Type = "FeatureCollection" };
+            var result = new Result<FeatureCollection>();
+
+            featureCollection.Name = collectionId;
+            featureCollection.Crs = "http://www.opengis.net/def/crs/OGC/1.3/CRS84"; //"http://www.opengis.net/def/crs/EPSG/0/2056";
+
+            for (int layerIndex = 0; layerIndex < layerCount; layerIndex++)
+            {
+                //if (layer.GetName() != collectionId)
+                //{
+                //    continue;
+                //}
+
+                var layer = dataSource.GetLayerByIndex(layerIndex);
+                var featureCount = layer.GetFeatureCount(1);
+                result.Messages.Add($"feature count {featureCount}");
+
+                if (bbox.Count > 0)
+                {
+                    // todo bbox-crs
+
+                    if (bbox.Count == 4)
+                    {
+                        layer.SetSpatialFilter(Geometry.CreateFromWkt($"POLYGON(({bbox[0]} {bbox[1]}, {bbox[2]} {bbox[1]},{bbox[2]} {bbox[3]}, {bbox[0]} {bbox[3]}, {bbox[0]} {bbox[1]}))"));
+                    }
+                    else if (bbox.Count == 6)
+                    {
+                        layer.SetSpatialFilter(Geometry.CreateFromWkt($"POLYGON(({bbox[0]} {bbox[1]}, {bbox[3]} {bbox[1]},{bbox[3]} {bbox[4]}, {bbox[0]} {bbox[4]}, {bbox[0]} {bbox[1]}))"));
+                    }
+                    else
+                    {
+                        result.Messages.Add("Ignore spatial filter because bbox is invalid");
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(query))
+                {
+                    //layer.SetAttributeFilter($"{featureList.IdFieldName} IN ({string.Join(',', featureList.Bodies.Select(x => $"'{x.Id}'"))})");
+                }
+
+                var featureCountFiltered = layer.GetFeatureCount(1);
+                result.Messages.Add($"feature count with filter {featureCountFiltered}");
+
+                Feature feature;
+                long i = 0;
+                long j = 0;
+                long limitCount = 0;
+
+                do
+                {
+                    feature = layer.GetNextFeature();
+
+                    if (feature != null)
+                    {
+                        i++;
+
+                        if (offset != null && i <= offset)
+                        {
+                            continue;
+                        }
+
+                        if (limit != 0 && limitCount >= limit)
+                        {
+                            continue;
+                        }
+
+                        if (limit != null)
+                        {
+                            limitCount++;
+                        }
+
+                        var featureCls = new Models.OgcApi.Features.Feature() { Type = "Feature" };
+                        var geometry = feature.GetGeometryRef();
+
+                        if (geometry == null)
+                        {
+                            //todo log
+                            continue;
+                        }
+
+                        // *********************************************************************************************************************
+                        // transformation back to wgs 84
+
+                        var sourceCrs = new OSGeo.OSR.SpatialReference("");
+                        sourceCrs.ImportFromEPSG(2056);
+
+                        var targetCrs = new OSGeo.OSR.SpatialReference("");
+                        targetCrs.ImportFromEPSG(4326);
+
+                        var coordTrans = new OSGeo.OSR.CoordinateTransformation(sourceCrs, targetCrs);
+
+                        geometry.Transform(coordTrans);
+
+                        // *********************************************************************************************************************
+
+
+                        featureCls.Id = $"{feature.GetFID()}";
+
+                        var geometryGeoJson = GeometryService.GetStringFromOgrGeometry(geometry, "geojson", false);
+
+                        if (!string.IsNullOrEmpty(geometryGeoJson))
+                        {
+                            j++;
+                            featureCls.Properties = GetFeatureProperties(feature);
+                            featureCls.Geometry = JsonConvert.DeserializeObject<dynamic>(geometryGeoJson)!;
+                            featureCollection.Features.Add(featureCls);
+                        }
+
+                    }
+
+                } while (feature != null);
+
+                featureCollection.NumberReturned = j;
+
+                layer.Dispose();
+            }
+
+            dataSource.Dispose();
+
+            result.Value = featureCollection;
+            result.Succesfully = true;
+
+            return result;
+        }
+
+        private static Dictionary<string,object> GetFeatureProperties(Feature feature)
+        {
+            Dictionary<string, object> properties = new();
+
+            var featureDef = feature.GetDefnRef();
+            var fieldCount = featureDef.GetFieldCount();
+
+            for (int i = 0; i < fieldCount; i++)
+            {
+                var field = featureDef.GetFieldDefn(i);
+                var fieldType = field.GetFieldType();
+
+                switch (fieldType)
+                {
+                    case FieldType.OFTInteger:
+                        properties.Add(field.GetName(), feature.GetFieldAsInteger(i));
+                        break;
+                    case FieldType.OFTIntegerList:
+                        properties.Add(field.GetName(), feature.GetFieldAsIntegerList(i, out int count));
+                        break;
+                    case FieldType.OFTReal:
+                        properties.Add(field.GetName(), feature.GetFieldAsDouble(i));
+                        break;
+                    case FieldType.OFTRealList:
+                        properties.Add(field.GetName(), feature.GetFieldAsDoubleList(i, out int count2));
+                        break;
+                    case FieldType.OFTString:
+                        properties.Add(field.GetName(), feature.GetFieldAsString(i));
+                        break;
+                    case FieldType.OFTStringList:
+                        properties.Add(field.GetName(), feature.GetFieldAsStringList(i));
+                        break;
+                    case FieldType.OFTWideString:
+                        properties.Add(field.GetName(), feature.GetFieldAsString(i));
+                        break;
+                    case FieldType.OFTWideStringList:
+                        properties.Add(field.GetName(), feature.GetFieldAsStringList(i));
+                        break;
+                    case FieldType.OFTBinary:
+                        // no support
+                        break;
+                    case FieldType.OFTDate:
+                        properties.Add(field.GetName(), feature.GetFieldAsISO8601DateTime(i, []));
+                        break;
+                    case FieldType.OFTTime:
+                        properties.Add(field.GetName(), feature.GetFieldAsISO8601DateTime(i, []));
+                        break;
+                    case FieldType.OFTDateTime:
+                        properties.Add(field.GetName(), feature.GetFieldAsISO8601DateTime(i, []));
+                        break;
+                    case FieldType.OFTInteger64:
+                        properties.Add(field.GetName(), feature.GetFieldAsInteger64(i));
+                        break;
+                    case FieldType.OFTInteger64List:
+                        // no support
+                        break;
+                }
+            }
+
+            return properties;
+        }
+    }
+}

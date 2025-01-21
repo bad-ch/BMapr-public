@@ -28,7 +28,7 @@ namespace BMapr.GDAL.WebApi.Services
             Map = new mapObj(mapContent, 1);
         }
 
-        public MapserverService(IMemoryCache cache, Config config, string project)
+        public MapserverService(Config config, string project)
         {
             var mapMetadata = MapFileService.GetMapFromProject(project, config);
 
