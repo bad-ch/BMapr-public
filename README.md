@@ -3,6 +3,7 @@ BMapr is an AddOn for MapServer, designed to enhance its functionality and provi
 
 # Features
 * MapServer Core Functionality: Publishes spatial data through OGC Geoservices like WMS, WFS, etc.
+* Support for OGC API features
 * BMapr Enhancements:
   * Support for WFS-T (T for Transaction not Time) on Microsoft SQL Server.
   * Integrated lightweight web server.
