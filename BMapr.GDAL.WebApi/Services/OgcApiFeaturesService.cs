@@ -226,6 +226,7 @@ namespace BMapr.GDAL.WebApi.Services
                         if (!string.IsNullOrEmpty(geometryGeoJson))
                         {
                             j++;
+                            featureCls.Properties = GetFeatureProperties(feature);
                             featureCls.Geometry = JsonConvert.DeserializeObject<dynamic>(geometryGeoJson)!;
                             featureCollection.Features.Add(featureCls);
                         }
@@ -245,6 +246,68 @@ namespace BMapr.GDAL.WebApi.Services
             result.Succesfully = true;
 
             return result;
+        }
+
+        private static Dictionary<string,object> GetFeatureProperties(Feature feature)
+        {
+            Dictionary<string, object> properties = new();
+
+            var featureDef = feature.GetDefnRef();
+            var fieldCount = featureDef.GetFieldCount();
+
+            for (int i = 0; i < fieldCount; i++)
+            {
+                var field = featureDef.GetFieldDefn(i);
+                var fieldType = field.GetFieldType();
+
+                switch (fieldType)
+                {
+                    case FieldType.OFTInteger:
+                        properties.Add(field.GetName(), feature.GetFieldAsInteger(i));
+                        break;
+                    case FieldType.OFTIntegerList:
+                        properties.Add(field.GetName(), feature.GetFieldAsIntegerList(i, out int count));
+                        break;
+                    case FieldType.OFTReal:
+                        properties.Add(field.GetName(), feature.GetFieldAsDouble(i));
+                        break;
+                    case FieldType.OFTRealList:
+                        properties.Add(field.GetName(), feature.GetFieldAsDoubleList(i, out int count2));
+                        break;
+                    case FieldType.OFTString:
+                        properties.Add(field.GetName(), feature.GetFieldAsString(i));
+                        break;
+                    case FieldType.OFTStringList:
+                        properties.Add(field.GetName(), feature.GetFieldAsStringList(i));
+                        break;
+                    case FieldType.OFTWideString:
+                        properties.Add(field.GetName(), feature.GetFieldAsString(i));
+                        break;
+                    case FieldType.OFTWideStringList:
+                        properties.Add(field.GetName(), feature.GetFieldAsStringList(i));
+                        break;
+                    case FieldType.OFTBinary:
+                        // no support
+                        break;
+                    case FieldType.OFTDate:
+                        properties.Add(field.GetName(), feature.GetFieldAsISO8601DateTime(i, []));
+                        break;
+                    case FieldType.OFTTime:
+                        properties.Add(field.GetName(), feature.GetFieldAsISO8601DateTime(i, []));
+                        break;
+                    case FieldType.OFTDateTime:
+                        properties.Add(field.GetName(), feature.GetFieldAsISO8601DateTime(i, []));
+                        break;
+                    case FieldType.OFTInteger64:
+                        properties.Add(field.GetName(), feature.GetFieldAsInteger64(i));
+                        break;
+                    case FieldType.OFTInteger64List:
+                        // no support
+                        break;
+                }
+            }
+
+            return properties;
         }
     }
 }
