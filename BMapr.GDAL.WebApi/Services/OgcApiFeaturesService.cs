@@ -1,10 +1,13 @@
 ﻿using BMapr.GDAL.WebApi.Models;
 using BMapr.GDAL.WebApi.Models.MapFile;
 using BMapr.GDAL.WebApi.Models.OgcApi.Features;
+using BMapr.GDAL.WebApi.Models.Spatial.Vector;
 using Newtonsoft.Json;
 using OSGeo.OGR;
 using Extent = BMapr.GDAL.WebApi.Models.OgcApi.Features.Extent;
 using Feature = OSGeo.OGR.Feature;
+using FeatureCollection = BMapr.GDAL.WebApi.Models.OgcApi.Features.FeatureCollection;
+using Geometry = OSGeo.OGR.Geometry;
 
 namespace BMapr.GDAL.WebApi.Services
 {
@@ -146,10 +149,31 @@ namespace BMapr.GDAL.WebApi.Services
 
                     if (bbox.Count == 4)
                     {
-                        layer.SetSpatialFilter(Geometry.CreateFromWkt($"POLYGON(({bbox[0]} {bbox[1]}, {bbox[2]} {bbox[1]},{bbox[2]} {bbox[3]}, {bbox[0]} {bbox[3]}, {bbox[0]} {bbox[1]}))"));
+                        // *********************************************************************************************************************
+                        // transformation back to wgs 84
+
+                        var sourceCrs = new OSGeo.OSR.SpatialReference("");
+                        sourceCrs.ImportFromEPSG(4326);
+
+                        var targetCrs = new OSGeo.OSR.SpatialReference("");
+                        targetCrs.ImportFromEPSG(2056);
+
+                        var coordTrans = new OSGeo.OSR.CoordinateTransformation(sourceCrs, targetCrs);
+
+                        //var geometryBbox = Geometry.CreateFromWkt($"POLYGON(({bbox[0]} {bbox[1]}, {bbox[2]} {bbox[1]},{bbox[2]} {bbox[3]}, {bbox[0]} {bbox[3]}, {bbox[0]} {bbox[1]}))");
+                        var geometryBbox = Geometry.CreateFromWkt($"POLYGON(({bbox[1]} {bbox[0]}, {bbox[1]} {bbox[2]},{bbox[3]} {bbox[2]}, {bbox[3]} {bbox[0]}, {bbox[1]} {bbox[0]}))");
+
+                        geometryBbox.Transform(coordTrans);
+
+                        var wktBBoxReproj = GeometryService.GetStringFromOgrGeometry(geometryBbox, "wkt");
+
+                        // *********************************************************************************************************************
+
+                        layer.SetSpatialFilter(geometryBbox);
                     }
                     else if (bbox.Count == 6)
                     {
+                        throw new NotImplementedException("bbox with 6 values not implemented");
                         layer.SetSpatialFilter(Geometry.CreateFromWkt($"POLYGON(({bbox[0]} {bbox[1]}, {bbox[3]} {bbox[1]},{bbox[3]} {bbox[4]}, {bbox[0]} {bbox[4]}, {bbox[0]} {bbox[1]}))"));
                     }
                     else

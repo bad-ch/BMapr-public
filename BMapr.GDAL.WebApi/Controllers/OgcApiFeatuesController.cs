@@ -1,10 +1,12 @@
-﻿using System.Text;
+﻿using System.Linq;
+using System.Text;
 using BMapr.GDAL.WebApi.Models;
 using BMapr.GDAL.WebApi.Models.OgcApi.Features;
 using BMapr.GDAL.WebApi.Services;
 using BMapr.WebApi.Controllers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace BMapr.GDAL.WebApi.Controllers
@@ -322,6 +324,7 @@ namespace BMapr.GDAL.WebApi.Controllers
             }
 
             // todo checks for filter
+            _logger.LogInformation($"project {project}, collectionId {collectionId}, bbox: {string.Join(',',bboxDouble.Select(x => x.ToString()))}, query: {query}, offset {offset}, limit {limit}, f: {f}");
 
             var featureCollection = OgcApiFeaturesService.GetItems(Config, project, collectionId, bboxDouble, bboxCrs, query, offset,limit, f);
 
