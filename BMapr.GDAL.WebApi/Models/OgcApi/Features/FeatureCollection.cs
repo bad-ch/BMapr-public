@@ -24,6 +24,9 @@ namespace BMapr.GDAL.WebApi.Models.OgcApi.Features
         [JsonProperty(PropertyName = "numberReturned")]
         public long NumberReturned = 0;
 
+        [JsonProperty(PropertyName = "numberMatched")]
+        public long NumberMatched = 0;
+
         [JsonProperty(PropertyName = "timeStamp")]
         public string timeStamp = DateTime.UtcNow.ToString("O");
 

@@ -13,6 +13,8 @@ namespace BMapr.GDAL.WebApi.Services
 {
     public static class OgcApiFeaturesService
     {
+        public static readonly string JsonMimeType = "application/json";
+
         public static Result<Models.OgcApi.Features.Collections> GetToc(Config config, string project, Collections collections, string urlCollections)
         {
             var mapserverService = new MapserverService(config, project);
@@ -154,9 +156,13 @@ namespace BMapr.GDAL.WebApi.Services
 
                         var sourceCrs = new OSGeo.OSR.SpatialReference("");
                         sourceCrs.ImportFromEPSG(4326);
+                        var t1 = sourceCrs.GetAxisOrientation(null, 0);
+                        var t2 = sourceCrs.GetAxisOrientation(null, 1);
 
                         var targetCrs = new OSGeo.OSR.SpatialReference("");
                         targetCrs.ImportFromEPSG(2056);
+                        var t3 = targetCrs.GetAxisOrientation(null, 0);
+                        var t4 = sourceCrs.GetAxisOrientation(null, 1);
 
                         var coordTrans = new OSGeo.OSR.CoordinateTransformation(sourceCrs, targetCrs);
 
@@ -188,7 +194,28 @@ namespace BMapr.GDAL.WebApi.Services
                 }
 
                 var featureCountFiltered = layer.GetFeatureCount(1);
+                
+                featureCollection.NumberMatched = featureCountFiltered;
+
                 result.Messages.Add($"feature count with filter {featureCountFiltered}");
+
+                // todo if number matched is very big force paging ?
+
+                if (offset != null && limit != null)
+                {
+                    var next = GetNavigationLink(true, config, project, collectionId, bbox, bboxCrs, query, (int)offset, (int)limit, f, (int)featureCountFiltered);
+                    var prev = GetNavigationLink(false, config, project, collectionId, bbox, bboxCrs, query, (int)offset, (int)limit, f, (int)featureCountFiltered);
+
+                    if (next != null)
+                    {
+                        featureCollection.Links.Add(next);
+                    }
+
+                    if (prev != null)
+                    {
+                        featureCollection.Links.Add(prev);
+                    }
+                }
 
                 Feature feature;
                 long i = 0;
@@ -332,6 +359,65 @@ namespace BMapr.GDAL.WebApi.Services
             }
 
             return properties;
+        }
+
+        private static Link? GetNavigationLink(bool next, Config config, string project, string collectionId, List<double> bbox, string? bboxCrs, string query, int offset, int limit, string f, int maxCount) 
+        {
+            var urlCollections = $"{config.Host}/api/ogcapi/features/{project}/collections/{collectionId}/items?";
+
+            bool flag=false;
+
+            if (!string.IsNullOrEmpty(f))
+            {
+                urlCollections += $"f={f}";
+                flag = true;
+            }
+
+            if (bbox.Count > 0)
+            {
+                urlCollections += $"{(flag?"&":"")}bbox={string.Join(',',bbox)}";
+                flag = true;
+            }
+
+            if (!string.IsNullOrEmpty(bboxCrs))
+            {
+                urlCollections += $"{(flag ? "&" : "")}bbox-crs={bboxCrs}";
+                flag = true;
+            }
+
+            if (!string.IsNullOrEmpty(query))
+            {
+                urlCollections += $"{(flag ? "&" : "")}query={query}";
+                flag = true;
+            }
+
+            int offsetNew = 0;
+
+            if (next)
+            {
+                offsetNew = offset + limit;
+                if (offsetNew > maxCount)
+                {
+                    return null;
+                }
+            }
+            else
+            {
+                offsetNew = offset - limit;
+                if (offsetNew < 0)
+                {
+                    return null;
+                }
+            }
+
+            urlCollections += $"{(flag ? "&" : "")}offset={(offsetNew)}";
+            urlCollections += $"&limit={(limit)}";
+
+            return new Link()
+            {
+                Href = urlCollections, Rel = (next ? "next" : "prev"), Title = $"{(next ? "Next" : "Previous")} page",
+                Type = JsonMimeType
+            };
         }
     }
 }
