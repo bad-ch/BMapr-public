@@ -34,8 +34,13 @@ namespace BMapr.GDAL.WebApi.Controllers
         [HttpHead("{project}")]
         [HttpGet("{project}/landingpage")]
         [HttpHead("{project}/landingpage")]
-        public ActionResult LandingPage(string project,[FromQuery] string f = "application/json")
+        public ActionResult LandingPage(string project, [FromQuery] string? service, [FromQuery] string f = "application/json")
         {
+            if (!string.IsNullOrEmpty(service) && service.ToLower() == "wfs")
+            {
+                return new StatusCodeResult(400);
+            }
+
             // no alternate format supported
 
             if (f.ToLower() != "application/json")
@@ -262,7 +267,7 @@ namespace BMapr.GDAL.WebApi.Controllers
         [HttpGet("{project}/collections/{collectionId}/items")]
         [HttpHead("{project}/collections/{collectionId}/items")]
         [HttpOptions("{project}/collections/{collectionId}/items")]
-        public ActionResult Feature(string project, string collectionId, [FromQuery] string? bbox, [FromQuery] string? bboxCrs, [FromQuery] string? query, [FromQuery] int? offset, [FromQuery] int? limit, [FromQuery] string f = "geojson", [FromQuery] bool file = false)
+        public ActionResult Feature(string project, string collectionId, [FromQuery] string? bbox, [FromQuery(Name = "bbox-crs")] string? bboxCrs, [FromQuery] string? query, [FromQuery] int? offset, [FromQuery] int? limit, [FromQuery] string f = "geojson", [FromQuery] bool file = false)
         {
             if (f.ToLower() != "geojson")
             {
