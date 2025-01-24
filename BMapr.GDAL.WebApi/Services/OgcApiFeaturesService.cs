@@ -201,7 +201,7 @@ namespace BMapr.GDAL.WebApi.Services
 
                 // force paging
 
-                if (offset == null && limit != null && limit > featureCountFiltered)
+                if (offset == null && limit != null && limit < featureCountFiltered)
                 {
                     // todo log
                     offset = 0;
