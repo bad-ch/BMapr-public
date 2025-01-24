@@ -199,7 +199,13 @@ namespace BMapr.GDAL.WebApi.Services
 
                 result.Messages.Add($"feature count with filter {featureCountFiltered}");
 
-                // todo if number matched is very big force paging ?
+                // force paging
+
+                if (offset == null && limit != null && limit > featureCountFiltered)
+                {
+                    // todo log
+                    offset = 0;
+                }
 
                 if (offset != null && limit != null)
                 {
