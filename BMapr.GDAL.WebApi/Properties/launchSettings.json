@@ -7,6 +7,18 @@
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
       "applicationUrl": "https://localhost:60449;http://localhost:60450"
+    },
+    "IIS": {
+      "commandName": "IIS",
+      "launchUrl": "https://ogc.dev.local"
+    }
+  },
+  "iisSettings": {
+    "windowsAuthentication": false,
+    "anonymousAuthentication": true,
+    "iis": {
+      "applicationUrl": "https://ogc.dev.local",
+      "sslPort": 0
     }
   }
 }
