@@ -1,13 +1,11 @@
-﻿using System.Linq;
-using System.Text;
-using BMapr.GDAL.WebApi.Models;
-using BMapr.GDAL.WebApi.Models.OgcApi.Features;
+﻿using BMapr.GDAL.WebApi.Models.OgcApi.Features;
+using BMapr.GDAL.WebApi.Models.Spatial;
 using BMapr.GDAL.WebApi.Services;
 using BMapr.WebApi.Controllers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using System.Text;
 
 namespace BMapr.GDAL.WebApi.Controllers
 {
@@ -19,10 +17,15 @@ namespace BMapr.GDAL.WebApi.Controllers
     public class OgcApiFeatuesController : DefaultController
     {
         private readonly ILogger<OgcController> _logger;
+        private static List<CrsDefinition> CrsList = new();
 
         public OgcApiFeatuesController(ILogger<OgcController> logger, IConfiguration iConfig, IWebHostEnvironment environment, IMemoryCache cache) : base(iConfig, environment)
         {
             _logger = logger;
+            if (CrsList.Count == 0)
+            {
+                CrsList = CrsService.GetData(logger, iConfig, environment);
+            }
         }
 
         /// <summary>
