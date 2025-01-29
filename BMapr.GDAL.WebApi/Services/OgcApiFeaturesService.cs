@@ -145,6 +145,12 @@ namespace BMapr.GDAL.WebApi.Services
                 var featureCount = layer.GetFeatureCount(1);
                 result.Messages.Add($"feature count {featureCount}");
 
+                var spatialRef = layer.GetSpatialRef();
+                result.Messages.Add($"layer spatial ref name {spatialRef.GetName()}, {spatialRef.GetAuthorityCode("PROJCS")}");
+
+                //Envelope layerExtent = null!;
+                //var extentStatus = layer.GetExtent(layerExtent, 1);
+
                 if (bbox.Count > 0)
                 {
                     // todo bbox-crs
