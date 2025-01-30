@@ -1,7 +1,7 @@
 ﻿using BMapr.GDAL.WebApi.Models;
 using BMapr.GDAL.WebApi.Models.MapFile;
 using BMapr.GDAL.WebApi.Models.OgcApi.Features;
-using BMapr.GDAL.WebApi.Models.Spatial.Vector;
+using BMapr.GDAL.WebApi.Models.Spatial;
 using Newtonsoft.Json;
 using OSGeo.OGR;
 using Extent = BMapr.GDAL.WebApi.Models.OgcApi.Features.Extent;
@@ -15,7 +15,7 @@ namespace BMapr.GDAL.WebApi.Services
     {
         public static readonly string JsonMimeType = "application/json";
 
-        public static Result<Models.OgcApi.Features.Collections> GetToc(Config config, string project, Collections collections, string urlCollections)
+        public static Result<Collections> GetCollections(Config config, List<CrsDefinition> crsDefinitions, string project, Collections collections, string urlCollections)
         {
             var mapserverService = new MapserverService(config, project);
             var result = mapserverService.GetMetadata(mapserverService.Map);
@@ -32,14 +32,14 @@ namespace BMapr.GDAL.WebApi.Services
 
             mapFile?.Layers.ForEach(item =>
             {
-                var resultCollection = GetCollectionItem(mapFile, item, urlCollections);
+                var resultCollection = GetCollectionItem(crsDefinitions, mapFile, item, urlCollections);
                 collections.CollectionList.Add(resultCollection.Value);
             });
 
             return new Result<Collections>(){Value = collections, Succesfully = true};
         }
 
-        public static Result<Models.OgcApi.Features.Collection> GetCollection(Config config, string project, string collectionId, string urlCollections)
+        public static Result<Collection> GetCollection(Config config, List<CrsDefinition> crsDefinitions, string project, string collectionId, string urlCollections)
         {
             var mapserverService = new MapserverService(config, project);
             var result = mapserverService.GetMetadata(mapserverService.Map);
@@ -62,14 +62,14 @@ namespace BMapr.GDAL.WebApi.Services
                     return;
                 }
 
-                var resultCollection = GetCollectionItem(mapFile, item, urlCollections);
+                var resultCollection = GetCollectionItem(crsDefinitions, mapFile, item, urlCollections);
                 collection = resultCollection.Value;
             });
 
             return new Result<Collection>() { Value = collection, Succesfully = true };
         }
 
-        private static Result<Models.OgcApi.Features.Collection> GetCollectionItem(MapFile mapFile, Models.MapFile.Layer item, string urlCollections)
+        private static Result<Collection> GetCollectionItem(List<CrsDefinition> crsDefinitions, MapFile mapFile, Models.MapFile.Layer item, string urlCollections)
         {
             var collection = new Collection()
             {
@@ -80,21 +80,39 @@ namespace BMapr.GDAL.WebApi.Services
                     Temporal = new Temporal(),
                     Spatial = new Spatial()
                     {
-                        Crs = "http://www.opengis.net/def/crs/OGC/1.3/CRS84" //$"http://www.opengis.net/def/crs/EPSG/0/{item.Metadata.MshEPSG}" // todo projection is not available ??
+                        Crs = "http://www.opengis.net/def/crs/OGC/1.3/CRS84"
                     }
                 }
             };
 
             collection.StorageCrs = "http://www.opengis.net/def/crs/OGC/1.3/CRS84"; //$"http://www.opengis.net/def/crs/EPSG/0/{item.Metadata.MshEPSG}";
-            collection.Crs.Add("http://www.opengis.net/def/crs/OGC/1.3/CRS84"); //$"http://www.opengis.net/def/crs/EPSG/0/{item.Metadata.MshEPSG}");
+            collection.Crs.Add("http://www.opengis.net/def/crs/OGC/1.3/CRS84");
+
+            var listMap = GetCrsList(mapFile.Web.Metadata.WfsSrs);
+
+            if (listMap.Count > 0)
+            {
+                collection.Crs.AddRange(listMap);
+            }
+
+            var listLayer = GetCrsList(item.Metadata.WfsSrs);
+
+            if (listLayer.Count > 0)
+            {
+                collection.Crs.AddRange(listLayer);
+            }
+
+            collection.Crs = collection.Crs.Distinct().ToList();
 
             if (item.Extent.Minx > 0)
             {
-                collection.Extent.Spatial.Bbox.Add(new List<double>() { 5.96, 45.82, 10.49, 47.81}); //item.Extent.Minx, item.Extent.Miny, item.Extent.Maxx, item.Extent.Maxy });
+                collection.Extent.Spatial.Bbox.Add(new List<double>() { item.Extent.Minx, item.Extent.Miny, item.Extent.Maxx, item.Extent.Maxy });
             }
             else
             {
-                collection.Extent.Spatial.Bbox.Add(new List<double>() {5.96, 45.82, 10.49, 47.81}); //mapFile.Extent.Minx, mapFile.Extent.Miny, mapFile.Extent.Maxx, mapFile.Extent.Maxy });
+                var crsDefinition = crsDefinitions.First(x => x.Epsg.ToString() == item.Metadata.MshEPSG);
+
+                collection.Extent.Spatial.Bbox.Add(new List<double>() { crsDefinition.WestBoundLon, crsDefinition.SouthBoundLat, crsDefinition.EastBoundLon, crsDefinition.NorthBoundLat });
             }
 
             collection.Links.Add(new Link() { Rel = "self", Title = "This collection", Type = "application/json", Href = $"{urlCollections}/{item.Name}" });
@@ -430,6 +448,19 @@ namespace BMapr.GDAL.WebApi.Services
                 Href = urlCollections, Rel = (next ? "next" : "prev"), Title = $"{(next ? "Next" : "Previous")} page",
                 Type = JsonMimeType
             };
+        }
+
+        private static List<string> GetCrsList(string listString)
+        {
+            List<string> result = new();
+            var crsList = listString.ToLower().Replace("epsg:", "").Split(" ").Select(x => $"http://www.opengis.net/def/crs/EPSG/0/{x}").ToList();
+
+            if (crsList.Count > 0)
+            {
+                result.AddRange(crsList);
+            }
+
+            return result.Distinct().ToList();
         }
     }
 }

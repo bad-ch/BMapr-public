@@ -216,7 +216,7 @@ namespace BMapr.GDAL.WebApi.Controllers
                 Href = $"{urlCollections}?f=application/json"
             });
 
-            var result = OgcApiFeaturesService.GetToc(Config, project, collections, urlCollections);
+            var result = OgcApiFeaturesService.GetCollections(Config, CrsList, project, collections, urlCollections);
             var content = JsonConvert.SerializeObject(result.Value);
 
             return new FileContentResult(Encoding.UTF8.GetBytes(content), "application/json");
@@ -248,7 +248,7 @@ namespace BMapr.GDAL.WebApi.Controllers
             Config.Host = HostService.Get(Request, IConfig);
 
             var urlCollections = $"{Config.Host}/api/ogcapi/features/{project}/collections";
-            var result = OgcApiFeaturesService.GetCollection(Config, project, collectionId, urlCollections);
+            var result = OgcApiFeaturesService.GetCollection(Config, CrsList, project, collectionId, urlCollections);
             var content = JsonConvert.SerializeObject(result.Value);
 
             return new FileContentResult(Encoding.UTF8.GetBytes(content), "application/json");
