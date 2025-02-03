@@ -13,6 +13,7 @@ An AddOn for [MapServer](https://mapserver.org/), designed to enhance its functi
 * BMapr Enhancements:
   * Support for WFS-T (T for Transaction not Time) on Microsoft SQL Server.
   * Integrated lightweight web server.
+  * run Mapserver on Windows with a one-liner.
 
 # Installation
 
@@ -24,16 +25,20 @@ An AddOn for [MapServer](https://mapserver.org/), designed to enhance its functi
 1. Download binaries from releases.
 2. Extract all files (C:\BMapr\)
 
-# Run as hosting app
+# Run
+To use the Endpoints listed below, run Bmapr with one of the following two options.  
+Please change the port according your configuration.
 
-Use following command (run as adminstrator):
+## hosting app
+
+Use following command (run as administrator):
 ``` bat
 C:\BMapr\BMapr.GDAL.WebApi.exe port=8080
 ```
 
-# Run as IIS website
+## IIS website
 
-Create a new website in IIS, which points to the root folder => use the following endpoints, please change the port according your configuration.
+Create a new website in IIS, which points to the root folder.
 
 # Configuration BMapr
 * Possibility to change configurations in appsettings.json 
