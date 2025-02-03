@@ -1,9 +1,15 @@
-# BMapr-public
-BMapr is an AddOn for MapServer, designed to enhance its functionality and provide additional features.
+<p align="center">
+  <img width="200" src="https://github.com/bad-ch/BMapr-public/blob/master/logo.svg"><br/>
+</p>
+
+
+# BMapr
+An AddOn for [MapServer](https://mapserver.org/), designed to enhance its functionality and provide additional features.
 
 # Features
-* MapServer Core Functionality: Publishes spatial data through OGC Geoservices like WMS, WFS, etc.
-* Support for OGC API features
+* MapServer Core Functionality:
+  * Publishes spatial data through OGC Geoservices like WMS, WFS, etc.
+  * Support for OGC API features
 * BMapr Enhancements:
   * Support for WFS-T (T for Transaction not Time) on Microsoft SQL Server.
   * Integrated lightweight web server.
@@ -27,7 +33,7 @@ C:\BMapr\BMapr.GDAL.WebApi.exe port=8080
 
 # Run as IIS website
 
-Create a new website in the IIS, which points to the root folder => use the following endpoints, please change the port according your configuration.
+Create a new website in IIS, which points to the root folder => use the following endpoints, please change the port according your configuration.
 
 # Configuration BMapr
 * Possibility to change configurations in appsettings.json 
