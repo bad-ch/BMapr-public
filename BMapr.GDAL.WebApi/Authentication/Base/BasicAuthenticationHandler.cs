@@ -1,12 +1,11 @@
-﻿using System.Security.Claims;
+﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.Extensions.Options;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.RegularExpressions;
-using BMapr.GDAL.WebApi.Models;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.Extensions.Options;
 
-namespace BMapr.GDAL.WebApi
+namespace BMapr.GDAL.WebApi.Authentication.Base
 {
     /// <summary>
     /// Basic authentication handler, if you host this app in a IIS, todo YOU HAVE TO DISABLE the basic authorization on IIS

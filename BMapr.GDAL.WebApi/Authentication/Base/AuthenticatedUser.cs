@@ -1,6 +1,6 @@
 ﻿using System.Security.Principal;
 
-namespace BMapr.GDAL.WebApi
+namespace BMapr.GDAL.WebApi.Authentication.Base
 {
     public class AuthenticatedUser : IIdentity
     {

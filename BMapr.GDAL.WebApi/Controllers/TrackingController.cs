@@ -1,11 +1,11 @@
-﻿using System.Text;
+﻿using BMapr.GDAL.WebApi.Authentication.Base;
 using BMapr.GDAL.WebApi.Models.Tracking;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Caching.Memory;
 using BMapr.GDAL.WebApi.Services;
 using LiteDB;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 using Newtonsoft.Json;
+using System.Text;
 
 namespace BMapr.GDAL.WebApi.Controllers
 {

@@ -1,12 +1,12 @@
-﻿using System.Net;
-using System.Text;
-using System.Web;
+﻿using BMapr.GDAL.WebApi.Authentication.Base;
 using BMapr.GDAL.WebApi.Models;
 using BMapr.GDAL.WebApi.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.Extensions.Caching.Memory;
 using Serilog;
+using System.Net;
+using System.Text;
+using System.Web;
 
 namespace BMapr.GDAL.WebApi.Controllers
 {

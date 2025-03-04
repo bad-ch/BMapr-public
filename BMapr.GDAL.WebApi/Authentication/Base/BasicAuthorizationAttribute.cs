@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 
-namespace BMapr.GDAL.WebApi
+namespace BMapr.GDAL.WebApi.Authentication.Base
 {
     public class BasicAuthorizationAttribute : AuthorizeAttribute
     {

@@ -1,4 +1,5 @@
 using BMapr.GDAL.WebApi;
+using BMapr.GDAL.WebApi.Authentication.Base;
 using BMapr.GDAL.WebApi.Models.Job;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
