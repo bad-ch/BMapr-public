@@ -123,7 +123,7 @@ namespace BMapr.GDAL.WebApi.Services
         }
 
         // todo return value
-        public static Result<FeatureCollection> GetItems(Config config, string project, string collectionId, List<double> bbox, string? bboxCrs, string query, int? offset, int? limit, string f)
+        public static Result<FeatureCollection> GetItems(Config config, string project, string collectionId, List<double> bbox, string? bboxCrs, string? crs, string query, int? offset, int? limit, string f)
         {
             var mapMetadata = MapFileService.GetMapFromProject(project, config);
 
@@ -148,9 +148,21 @@ namespace BMapr.GDAL.WebApi.Services
             var layerCount = dataSource.GetLayerCount();
             var featureCollection = new FeatureCollection() { Type = "FeatureCollection" };
             var result = new Result<FeatureCollection>();
+            int crsOut = 0;
 
             featureCollection.Name = collectionId;
-            featureCollection.Crs = "http://www.opengis.net/def/crs/OGC/1.3/CRS84"; //"http://www.opengis.net/def/crs/EPSG/0/2056";
+
+            if (string.IsNullOrEmpty(crs))
+            {
+                // todo check whether allowed
+                featureCollection.Crs = "http://www.opengis.net/def/crs/OGC/1.3/CRS84"; //"http://www.opengis.net/def/crs/EPSG/0/2056";
+                crsOut = 4326;
+            }
+            else
+            {
+                featureCollection.Crs = crs;
+                crsOut = Convert.ToInt32(crs.ToLowerInvariant().Replace("http://www.opengis.net/def/crs/epsg/0/", ""));
+            }
 
             for (int layerIndex = 0; layerIndex < layerCount; layerIndex++)
             {
@@ -166,8 +178,27 @@ namespace BMapr.GDAL.WebApi.Services
                 var spatialRef = layer.GetSpatialRef();
                 result.Messages.Add($"layer spatial ref name {spatialRef.GetName()}, {spatialRef.GetAuthorityCode("PROJCS")}");
 
+                var authorityCode = spatialRef.GetAuthorityCode("PROJCS");
+
+                int crsSrc = 0;
+
+                if (!string.IsNullOrEmpty(authorityCode))
+                {
+                    crsSrc = Convert.ToInt32(authorityCode);
+                }
+                else if (layerConfig.EPSG > 0)
+                {
+                    crsSrc = layerConfig.EPSG;
+                }
+                else
+                {
+                    throw new Exception("OGC API featurues, data has no CRS");
+                }
+
                 //Envelope layerExtent = null!;
                 //var extentStatus = layer.GetExtent(layerExtent, 1);
+
+                Geometry geometryBbox = null;
 
                 if (bbox.Count > 0)
                 {
@@ -175,27 +206,69 @@ namespace BMapr.GDAL.WebApi.Services
 
                     if (bbox.Count == 4)
                     {
+                        if (crsOut != crsSrc)
+                        {
+                            var outCrs = new OSGeo.OSR.SpatialReference("");
+                            outCrs.ImportFromEPSG(crsOut);
+                            //var t1 = outCrs.GetAxisOrientation(null, 0);
+                            //var t2 = outCrs.GetAxisOrientation(null, 1);
+
+
+                            var srcCrs = new OSGeo.OSR.SpatialReference("");
+                            srcCrs.ImportFromEPSG(crsSrc);
+                            //var t3 = srcCrs.GetAxisOrientation(null, 0);
+                            //var t4 = srcCrs.GetAxisOrientation(null, 1);
+
+                            var coordTransBbox = new OSGeo.OSR.CoordinateTransformation(outCrs, srcCrs);
+                           
+
+                            if (crsOut == 4326)
+                            {
+                                geometryBbox = Geometry.CreateFromWkt($"POLYGON(({bbox[1]} {bbox[0]}, {bbox[1]} {bbox[2]},{bbox[3]} {bbox[2]}, {bbox[3]} {bbox[0]}, {bbox[1]} {bbox[0]}))");
+                            }
+                            else
+                            {
+                                geometryBbox = Geometry.CreateFromWkt($"POLYGON(({bbox[0]} {bbox[1]}, {bbox[2]} {bbox[1]},{bbox[2]} {bbox[3]}, {bbox[0]} {bbox[3]}, {bbox[0]} {bbox[1]}))");
+                            }
+
+                            geometryBbox.Transform(coordTransBbox);
+                        }
+                        else
+                        {
+                            if (crsOut == 4326)
+                            {
+                                geometryBbox = Geometry.CreateFromWkt($"POLYGON(({bbox[1]} {bbox[0]}, {bbox[1]} {bbox[2]},{bbox[3]} {bbox[2]}, {bbox[3]} {bbox[0]}, {bbox[1]} {bbox[0]}))");
+                            }
+                        }
+
+                        if (geometryBbox == null)
+                        {
+                            throw new Exception("OGC API featurues, bbox geometry wrong");
+                        }
+
+                        var wktBBoxReproj = GeometryService.GetStringFromOgrGeometry(geometryBbox, "wkt");
+
                         // *********************************************************************************************************************
                         // transformation back to wgs 84
 
-                        var sourceCrs = new OSGeo.OSR.SpatialReference("");
-                        sourceCrs.ImportFromEPSG(4326);
-                        var t1 = sourceCrs.GetAxisOrientation(null, 0);
-                        var t2 = sourceCrs.GetAxisOrientation(null, 1);
+                        //var sourceCrs = new OSGeo.OSR.SpatialReference("");
+                        //sourceCrs.ImportFromEPSG(4326);
+                        //var t1 = sourceCrs.GetAxisOrientation(null, 0);
+                        //var t2 = sourceCrs.GetAxisOrientation(null, 1);
 
-                        var targetCrs = new OSGeo.OSR.SpatialReference("");
-                        targetCrs.ImportFromEPSG(2056);
-                        var t3 = targetCrs.GetAxisOrientation(null, 0);
-                        var t4 = sourceCrs.GetAxisOrientation(null, 1);
+                        //var targetCrs = new OSGeo.OSR.SpatialReference("");
+                        //targetCrs.ImportFromEPSG(2056);
+                        //var t3 = targetCrs.GetAxisOrientation(null, 0);
+                        //var t4 = sourceCrs.GetAxisOrientation(null, 1);
 
-                        var coordTrans = new OSGeo.OSR.CoordinateTransformation(sourceCrs, targetCrs);
+                        //var coordTrans = new OSGeo.OSR.CoordinateTransformation(sourceCrs, targetCrs);
 
-                        //var geometryBbox = Geometry.CreateFromWkt($"POLYGON(({bbox[0]} {bbox[1]}, {bbox[2]} {bbox[1]},{bbox[2]} {bbox[3]}, {bbox[0]} {bbox[3]}, {bbox[0]} {bbox[1]}))");
-                        var geometryBbox = Geometry.CreateFromWkt($"POLYGON(({bbox[1]} {bbox[0]}, {bbox[1]} {bbox[2]},{bbox[3]} {bbox[2]}, {bbox[3]} {bbox[0]}, {bbox[1]} {bbox[0]}))");
+                        ////var geometryBbox = Geometry.CreateFromWkt($"POLYGON(({bbox[0]} {bbox[1]}, {bbox[2]} {bbox[1]},{bbox[2]} {bbox[3]}, {bbox[0]} {bbox[3]}, {bbox[0]} {bbox[1]}))");
+                        //var geometryBbox = Geometry.CreateFromWkt($"POLYGON(({bbox[1]} {bbox[0]}, {bbox[1]} {bbox[2]},{bbox[3]} {bbox[2]}, {bbox[3]} {bbox[0]}, {bbox[1]} {bbox[0]}))");
 
-                        geometryBbox.Transform(coordTrans);
+                        //geometryBbox.Transform(coordTrans);
 
-                        var wktBBoxReproj = GeometryService.GetStringFromOgrGeometry(geometryBbox, "wkt");
+                        //var wktBBoxReproj = GeometryService.GetStringFromOgrGeometry(geometryBbox, "wkt");
 
                         // *********************************************************************************************************************
 
@@ -285,20 +358,20 @@ namespace BMapr.GDAL.WebApi.Services
                         }
 
                         // *********************************************************************************************************************
-                        // transformation back to wgs 84
+                        // reproject data
 
-                        var sourceCrs = new OSGeo.OSR.SpatialReference("");
-                        sourceCrs.ImportFromEPSG(2056);
+                        if (crsOut != crsSrc)
+                        {
+                            var srcCrs = new OSGeo.OSR.SpatialReference("");
+                            srcCrs.ImportFromEPSG(crsSrc);
 
-                        var targetCrs = new OSGeo.OSR.SpatialReference("");
-                        targetCrs.ImportFromEPSG(4326);
+                            var outCrs = new OSGeo.OSR.SpatialReference("");
+                            outCrs.ImportFromEPSG(4326);
 
-                        var coordTrans = new OSGeo.OSR.CoordinateTransformation(sourceCrs, targetCrs);
+                            var coordTrans = new OSGeo.OSR.CoordinateTransformation(srcCrs, outCrs);
 
-                        geometry.Transform(coordTrans);
-
-                        // *********************************************************************************************************************
-
+                            geometry.Transform(coordTrans);
+                        }
 
                         featureCls.Id = $"{feature.GetFID()}";
 

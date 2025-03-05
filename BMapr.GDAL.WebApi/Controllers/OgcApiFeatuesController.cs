@@ -270,7 +270,7 @@ namespace BMapr.GDAL.WebApi.Controllers
         [HttpGet("{project}/collections/{collectionId}/items")]
         [HttpHead("{project}/collections/{collectionId}/items")]
         [HttpOptions("{project}/collections/{collectionId}/items")]
-        public ActionResult Feature(string project, string collectionId, [FromQuery] string? bbox, [FromQuery(Name = "bbox-crs")] string? bboxCrs, [FromQuery] string? query, [FromQuery] int? offset, [FromQuery] int? limit, [FromQuery] string f = "geojson", [FromQuery] bool file = false)
+        public ActionResult Feature(string project, string collectionId, [FromQuery] string? bbox, [FromQuery(Name = "bbox-crs")] string? bboxCrs, [FromQuery] string? crs, [FromQuery] string? query, [FromQuery] int? offset, [FromQuery] int? limit, [FromQuery] string f = "geojson", [FromQuery] bool file = false)
         {
             if (f.ToLower() != "geojson")
             {
@@ -300,6 +300,14 @@ namespace BMapr.GDAL.WebApi.Controllers
             if (offset != null && (offset < 0 || offset > 100000)) // max specification 10'000
             {
                 return BadRequest("OGC API if set offset has to be between 1 and 100'000");
+            }
+
+            if (!string.IsNullOrEmpty(crs))
+            {
+                if (!(crs.ToLower().StartsWith("http://www.opengis.net/def/crs/epsg/0/") || crs == "http://www.opengis.net/def/crs/ogc/1.3/crs84"))
+                {
+                    return BadRequest("OGC API feature, bad CRS definition");
+                }
             }
 
             var bboxDouble = new List<double>();
@@ -334,7 +342,7 @@ namespace BMapr.GDAL.WebApi.Controllers
             // todo checks for filter
             _logger.LogInformation($"project {project}, collectionId {collectionId}, bbox: {string.Join(',',bboxDouble.Select(x => x.ToString()))}, query: {query}, offset {offset}, limit {limit}, f: {f}");
 
-            var featureCollection = OgcApiFeaturesService.GetItems(Config, project, collectionId, bboxDouble, bboxCrs, query, offset,limit, f);
+            var featureCollection = OgcApiFeaturesService.GetItems(Config, project, collectionId, bboxDouble, bboxCrs, crs, query, offset,limit, f);
 
             var content = JsonConvert.SerializeObject(featureCollection.Value);
 
