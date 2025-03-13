@@ -1,4 +1,4 @@
-﻿using BMapr.GDAL.WebApi.Models;
+using BMapr.GDAL.WebApi.Models;
 using BMapr.GDAL.WebApi.Models.MapFile;
 using BMapr.GDAL.WebApi.Models.OgcApi.Features;
 using BMapr.GDAL.WebApi.Models.Spatial;
@@ -206,6 +206,15 @@ namespace BMapr.GDAL.WebApi.Services
 
                     if (bbox.Count == 4)
                     {
+                        if (crsOut == 4326)
+                        {
+                            geometryBbox = Geometry.CreateFromWkt($"POLYGON(({bbox[1]} {bbox[0]}, {bbox[1]} {bbox[2]},{bbox[3]} {bbox[2]}, {bbox[3]} {bbox[0]}, {bbox[1]} {bbox[0]}))");
+                        }
+                        else
+                        {
+                            geometryBbox = Geometry.CreateFromWkt($"POLYGON(({bbox[0]} {bbox[1]}, {bbox[2]} {bbox[1]},{bbox[2]} {bbox[3]}, {bbox[0]} {bbox[3]}, {bbox[0]} {bbox[1]}))");
+                        }
+
                         if (crsOut != crsSrc)
                         {
                             var outCrs = new OSGeo.OSR.SpatialReference("");
@@ -220,25 +229,8 @@ namespace BMapr.GDAL.WebApi.Services
                             //var t4 = srcCrs.GetAxisOrientation(null, 1);
 
                             var coordTransBbox = new OSGeo.OSR.CoordinateTransformation(outCrs, srcCrs);
-                           
-
-                            if (crsOut == 4326)
-                            {
-                                geometryBbox = Geometry.CreateFromWkt($"POLYGON(({bbox[1]} {bbox[0]}, {bbox[1]} {bbox[2]},{bbox[3]} {bbox[2]}, {bbox[3]} {bbox[0]}, {bbox[1]} {bbox[0]}))");
-                            }
-                            else
-                            {
-                                geometryBbox = Geometry.CreateFromWkt($"POLYGON(({bbox[0]} {bbox[1]}, {bbox[2]} {bbox[1]},{bbox[2]} {bbox[3]}, {bbox[0]} {bbox[3]}, {bbox[0]} {bbox[1]}))");
-                            }
-
+                            
                             geometryBbox.Transform(coordTransBbox);
-                        }
-                        else
-                        {
-                            if (crsOut == 4326)
-                            {
-                                geometryBbox = Geometry.CreateFromWkt($"POLYGON(({bbox[1]} {bbox[0]}, {bbox[1]} {bbox[2]},{bbox[3]} {bbox[2]}, {bbox[3]} {bbox[0]}, {bbox[1]} {bbox[0]}))");
-                            }
                         }
 
                         if (geometryBbox == null)
@@ -247,30 +239,6 @@ namespace BMapr.GDAL.WebApi.Services
                         }
 
                         var wktBBoxReproj = GeometryService.GetStringFromOgrGeometry(geometryBbox, "wkt");
-
-                        // *********************************************************************************************************************
-                        // transformation back to wgs 84
-
-                        //var sourceCrs = new OSGeo.OSR.SpatialReference("");
-                        //sourceCrs.ImportFromEPSG(4326);
-                        //var t1 = sourceCrs.GetAxisOrientation(null, 0);
-                        //var t2 = sourceCrs.GetAxisOrientation(null, 1);
-
-                        //var targetCrs = new OSGeo.OSR.SpatialReference("");
-                        //targetCrs.ImportFromEPSG(2056);
-                        //var t3 = targetCrs.GetAxisOrientation(null, 0);
-                        //var t4 = sourceCrs.GetAxisOrientation(null, 1);
-
-                        //var coordTrans = new OSGeo.OSR.CoordinateTransformation(sourceCrs, targetCrs);
-
-                        ////var geometryBbox = Geometry.CreateFromWkt($"POLYGON(({bbox[0]} {bbox[1]}, {bbox[2]} {bbox[1]},{bbox[2]} {bbox[3]}, {bbox[0]} {bbox[3]}, {bbox[0]} {bbox[1]}))");
-                        //var geometryBbox = Geometry.CreateFromWkt($"POLYGON(({bbox[1]} {bbox[0]}, {bbox[1]} {bbox[2]},{bbox[3]} {bbox[2]}, {bbox[3]} {bbox[0]}, {bbox[1]} {bbox[0]}))");
-
-                        //geometryBbox.Transform(coordTrans);
-
-                        //var wktBBoxReproj = GeometryService.GetStringFromOgrGeometry(geometryBbox, "wkt");
-
-                        // *********************************************************************************************************************
 
                         layer.SetSpatialFilter(geometryBbox);
                     }
@@ -292,7 +260,7 @@ namespace BMapr.GDAL.WebApi.Services
 
                 var featureCountFiltered = layer.GetFeatureCount(1);
                 
-                featureCollection.NumberMatched = featureCountFiltered;
+                featureCollection.NumberMatched = featureCountFiltered - 1;
 
                 result.Messages.Add($"feature count with filter {featureCountFiltered}");
 
@@ -324,70 +292,64 @@ namespace BMapr.GDAL.WebApi.Services
                 long i = 0;
                 long j = 0;
                 long limitCount = 0;
+                layer.ResetReading();
 
-                do
+                while ((feature = layer.GetNextFeature()) != null)
                 {
-                    feature = layer.GetNextFeature();
+                    i++;
 
-                    if (feature != null)
+                    if (offset != null && i <= offset)
                     {
-                        i++;
-
-                        if (offset != null && i <= offset)
-                        {
-                            continue;
-                        }
-
-                        if (limit != 0 && limitCount >= limit)
-                        {
-                            continue;
-                        }
-
-                        if (limit != null)
-                        {
-                            limitCount++;
-                        }
-
-                        var featureCls = new Models.OgcApi.Features.Feature() { Type = "Feature" };
-                        var geometry = feature.GetGeometryRef();
-
-                        if (geometry == null)
-                        {
-                            //todo log
-                            continue;
-                        }
-
-                        // *********************************************************************************************************************
-                        // reproject data
-
-                        if (crsOut != crsSrc)
-                        {
-                            var srcCrs = new OSGeo.OSR.SpatialReference("");
-                            srcCrs.ImportFromEPSG(crsSrc);
-
-                            var outCrs = new OSGeo.OSR.SpatialReference("");
-                            outCrs.ImportFromEPSG(4326);
-
-                            var coordTrans = new OSGeo.OSR.CoordinateTransformation(srcCrs, outCrs);
-
-                            geometry.Transform(coordTrans);
-                        }
-
-                        featureCls.Id = $"{feature.GetFID()}";
-
-                        var geometryGeoJson = GeometryService.GetStringFromOgrGeometry(geometry, "geojson", false);
-
-                        if (!string.IsNullOrEmpty(geometryGeoJson))
-                        {
-                            j++;
-                            featureCls.Properties = GetFeatureProperties(feature);
-                            featureCls.Geometry = JsonConvert.DeserializeObject<dynamic>(geometryGeoJson)!;
-                            featureCollection.Features.Add(featureCls);
-                        }
-
+                        continue;
                     }
 
-                } while (feature != null);
+                    if (limit != 0 && limitCount >= limit)
+                    {
+                        continue;
+                    }
+
+                    if (limit != null)
+                    {
+                        limitCount++;
+                    }
+
+                    var featureCls = new Models.OgcApi.Features.Feature() { Type = "Feature" };
+                    var geometry = feature.GetGeometryRef();
+
+                    if (geometry == null)
+                    {
+                        //todo log
+                        continue;
+                    }
+
+                    // *********************************************************************************************************************
+                    // reproject data
+
+                    if (crsOut != crsSrc)
+                    {
+                        var srcCrs = new OSGeo.OSR.SpatialReference("");
+                        srcCrs.ImportFromEPSG(crsSrc);
+
+                        var outCrs = new OSGeo.OSR.SpatialReference("");
+                        outCrs.ImportFromEPSG(4326);
+
+                        var coordTrans = new OSGeo.OSR.CoordinateTransformation(srcCrs, outCrs);
+
+                        geometry.Transform(coordTrans);
+                    }
+
+                    featureCls.Id = $"{feature.GetFID()}";
+
+                    var geometryGeoJson = GeometryService.GetStringFromOgrGeometry(geometry, "geojson", false);
+
+                    if (!string.IsNullOrEmpty(geometryGeoJson))
+                    {
+                        j++;
+                        featureCls.Properties = GetFeatureProperties(feature);
+                        featureCls.Geometry = JsonConvert.DeserializeObject<dynamic>(geometryGeoJson)!;
+                        featureCollection.Features.Add(featureCls);
+                    }
+                }
 
                 featureCollection.NumberReturned = j;
 
