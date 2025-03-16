@@ -364,6 +364,148 @@ namespace BMapr.GDAL.WebApi.Services
             return result;
         }
 
+        public static Result<Schema> GetQueryables(Config config, string project, string collectionId, string f)
+        {
+            var mapMetadata = MapFileService.GetMapFromProject(project, config);
+
+            if (!mapMetadata.Succesfully || string.IsNullOrEmpty(mapMetadata.Value.Key) || string.IsNullOrEmpty(mapMetadata.Value.FilePath))
+            {
+                return new Result<Schema>() { Value = null, Succesfully = false, Messages = new List<string>() { "Error getting map metadata" } };
+            }
+
+            var resultMapConfig = MapFileService.GetMapConfigFromCache(mapMetadata.Value.Key, mapMetadata.Value.FilePath, config, project);
+
+            if (!resultMapConfig.Succesfully)
+            {
+                return new Result<Schema>() { Value = null, Succesfully = false, Messages = new List<string>() { "Config map not opened successfully" } };
+            }
+
+            var mapConfig = resultMapConfig.Value;
+            var layerConfig = mapConfig.GetLayerConfig(collectionId);
+
+            GdalConfiguration.ConfigureOgr();
+
+            var dataSource = Ogr.Open(layerConfig.Connection, 0);
+            var layerCount = dataSource.GetLayerCount();
+            var schema = new Schema();
+
+            schema.Title = collectionId;
+
+            for (int layerIndex = 0; layerIndex < layerCount; layerIndex++)
+            {
+                var layer = dataSource.GetLayerByIndex(layerIndex);
+
+                if (layerIndex > 0)
+                {
+                    continue; // skip other layers than index 0
+                }
+
+                if (layer != null)
+                {
+                    var layerDefinition = layer.GetLayerDefn();
+
+                    for (int fgi = 0; fgi < layerDefinition.GetGeomFieldCount(); fgi++)
+                    {
+                        var geometryFieldDef = layerDefinition.GetGeomFieldDefn(fgi);
+                        var name = geometryFieldDef.GetName();
+
+                        schema.Properties.Add(name,new SchemaProperty()
+                        {
+                            Title = name,
+                            Role = fgi == 0 ? "primary-geometry" : "secondary-geometry",
+                            Format = GetGeometryFormat(geometryFieldDef),
+                            Ref = "https://geojson.org/schema/Geometry.json"
+                        });
+                    }
+
+                    for (int fi = 0; fi < layerDefinition.GetFieldCount(); fi++)
+                    {
+                        var fieldDef = layer.GetLayerDefn().GetFieldDefn(fi);
+                        var name = fieldDef.GetName();
+                        var nameLc = name.ToLower();
+                        var format = GetFieldFormat(fieldDef);
+
+                        schema.Properties.Add(name, new SchemaProperty()
+                        {
+                            Title = name,
+                            Role = (nameLc == "id" || nameLc == "fid" || nameLc == "gid") ? "id" : null,
+                            Format = format.Item1,
+                            //Enum = format.Item2 not supported yet
+                        });
+                    }
+                }
+            }
+
+            schema.Id = $"{config.Host}/api/ogcapi/features/{project}/collections/{collectionId}/queryables?f=json";
+
+            return new Result<Schema>(){Value = schema};
+        }
+
+        private static string GetGeometryFormat(GeomFieldDefn geometryFieldDef)
+        {
+            var type = geometryFieldDef.GetFieldType();
+
+            switch (type)
+            {
+                case wkbGeometryType.wkbPoint:
+                case wkbGeometryType.wkbPoint25D:
+                case wkbGeometryType.wkbPointM:
+                case wkbGeometryType.wkbPointZM:
+                    return "geometry-point";
+                case wkbGeometryType.wkbLineString:
+                case wkbGeometryType.wkbLineString25D:
+                case wkbGeometryType.wkbLineStringM:
+                case wkbGeometryType.wkbLineStringZM:
+                case wkbGeometryType.wkbCurve:
+                case wkbGeometryType.wkbCurveM:
+                case wkbGeometryType.wkbCurveZM:
+                    return "geometry-linestring";
+                case wkbGeometryType.wkbPolygon:
+                case wkbGeometryType.wkbPolygon25D:
+                case wkbGeometryType.wkbPolygonM:
+                case wkbGeometryType.wkbPolygonZM:
+                case wkbGeometryType.wkbCurvePolygon:
+                case wkbGeometryType.wkbCurvePolygonM:
+                case wkbGeometryType.wkbCurvePolygonZM:
+                    return "geometry-polygon";
+                default:
+                    return $"not supported format {type.ToString()}";
+            }
+        }
+
+        private static (string, string) GetFieldFormat(FieldDefn fieldDef)
+        {
+            var type = fieldDef.GetFieldType();
+
+            switch (type)
+            {
+                case FieldType.OFTInteger:
+                case FieldType.OFTInteger64:
+                    return ("integer", string.Empty);
+                case FieldType.OFTIntegerList:
+                case FieldType.OFTInteger64List:
+                    return ("integer", "enum");
+                case FieldType.OFTReal:
+                    return ("number", string.Empty);
+                case FieldType.OFTRealList:
+                    return ("number", "enum");
+                case FieldType.OFTString:
+                case FieldType.OFTWideString:
+                    return ("string", string.Empty);
+                case FieldType.OFTStringList:
+                case FieldType.OFTWideStringList:
+                    return ("string", "enum");
+                case FieldType.OFTDate:
+                    return ("date", string.Empty);
+                case FieldType.OFTTime:
+                    return ("time", string.Empty);
+                case FieldType.OFTDateTime:
+                    return ("date-time", string.Empty);
+                default:
+                    return ($"not supported format {type.ToString()}", string.Empty);
+            }
+        }
+
         private static Dictionary<string,object> GetFeatureProperties(Feature feature)
         {
             Dictionary<string, object> properties = new();

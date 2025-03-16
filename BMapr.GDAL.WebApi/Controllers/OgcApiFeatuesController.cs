@@ -261,6 +261,7 @@ namespace BMapr.GDAL.WebApi.Controllers
         /// <param name="collectionId">name of feature</param>
         /// <param name="bbox">envelope of the wished area</param>
         /// <param name="bboxCrs">CRS from the bbox if differnt from default</param>
+        /// <param name="crs">CRS of the response</param>
         /// <param name="query">query of attributes</param>
         /// <param name="offset">paging start offset to skip</param>
         /// <param name="limit">page size</param>
@@ -272,9 +273,9 @@ namespace BMapr.GDAL.WebApi.Controllers
         [HttpOptions("{project}/collections/{collectionId}/items")]
         public ActionResult Feature(string project, string collectionId, [FromQuery] string? bbox, [FromQuery(Name = "bbox-crs")] string? bboxCrs, [FromQuery] string? crs, [FromQuery] string? query, [FromQuery] int? offset, [FromQuery] int? limit, [FromQuery] string f = "geojson", [FromQuery] bool file = false)
         {
-            if (f.ToLower() != "geojson")
+            if (f.ToLower() != "geojson" && f.ToLower() != "json")
             {
-                return BadRequest("OGC API format not supported");
+                return BadRequest($"OGC API format <<{f}>> not supported");
             }
 
             var projectPath = Path.Combine(Config.DataProjects!.FullName, project);
@@ -354,6 +355,41 @@ namespace BMapr.GDAL.WebApi.Controllers
             Response.Headers.Append("Content-Crs", featureCollection.Value.Crs);
             
             return new FileContentResult(Encoding.UTF8.GetBytes(content), "application/geo+json");
+        }
+
+        [HttpGet("{project}/collections/{collectionId}/queryables")]
+        [HttpHead("{project}/collections/{collectionId}/queryables")]
+        [HttpOptions("{project}/collections/{collectionId}/queryables")]
+        public ActionResult Queryables(string project, string collectionId, [FromQuery] string f = "json")
+        {
+            if (f.ToLower() != "json")
+            {
+                return BadRequest("OGC API format not supported");
+            }
+
+            var projectPath = Path.Combine(Config.DataProjects!.FullName, project);
+
+            if (!Directory.Exists(projectPath))
+            {
+                return BadRequest("OGC API project not found");
+            }
+
+            Config.Host = HostService.Get(Request, IConfig);
+
+            // todo check collection id exists
+            if (string.IsNullOrEmpty(collectionId))
+            {
+                return BadRequest("OGC API collection id is empty");
+            }
+
+            var queryables = OgcApiFeaturesService.GetQueryables(Config, project, collectionId, f);
+
+            var content = JsonConvert.SerializeObject(queryables.Value, new JsonSerializerSettings
+            {
+                NullValueHandling = NullValueHandling.Ignore
+            });
+
+            return new FileContentResult(Encoding.UTF8.GetBytes(content), "application/schema+json");
         }
     }
 }
