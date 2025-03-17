@@ -262,7 +262,6 @@ namespace BMapr.GDAL.WebApi.Controllers
         /// <param name="bbox">envelope of the wished area</param>
         /// <param name="bboxCrs">CRS from the bbox if differnt from default</param>
         /// <param name="crs">CRS of the response</param>
-        /// <param name="query">query of attributes</param>
         /// <param name="offset">paging start offset to skip</param>
         /// <param name="limit">page size</param>
         /// <param name="f">format of the queried data</param>
@@ -271,7 +270,7 @@ namespace BMapr.GDAL.WebApi.Controllers
         [HttpGet("{project}/collections/{collectionId}/items")]
         [HttpHead("{project}/collections/{collectionId}/items")]
         [HttpOptions("{project}/collections/{collectionId}/items")]
-        public ActionResult Feature(string project, string collectionId, [FromQuery] string? bbox, [FromQuery(Name = "bbox-crs")] string? bboxCrs, [FromQuery] string? crs, [FromQuery] string? query, [FromQuery] int? offset, [FromQuery] int? limit, [FromQuery] string f = "geojson", [FromQuery] bool file = false)
+        public ActionResult Feature(string project, string collectionId, [FromQuery] string? bbox, [FromQuery(Name = "bbox-crs")] string? bboxCrs, [FromQuery] string? crs, [FromQuery] int? offset, [FromQuery] int? limit, [FromQuery] string f = "geojson", [FromQuery] bool file = false)
         {
             if (f.ToLower() != "geojson" && f.ToLower() != "json")
             {
@@ -338,6 +337,28 @@ namespace BMapr.GDAL.WebApi.Controllers
                 {
                     return BadRequest("OGC API bbox has to be xmin,ymin,zmin,xmax,ymax,zmax");
                 }
+            }
+
+            var queryParameter = Request.Query.ToDictionary(x => x.Key, y => y.Value.ToString());
+            var protectedParameters = new List<string>()
+                {"project", "collectionId", "bbox", "bbox-crs", "crs", "offset", "limit", "f", "file"};
+            var query = string.Empty;
+            var index = 0;
+
+            foreach (var keyValuePair in queryParameter)
+            {
+                if (protectedParameters.Contains(keyValuePair.Key.ToLower()))
+                {
+                    continue;
+                }
+
+                if (index > 0)
+                {
+                    query += $"{query} AND ";
+                }
+
+                query = $"{keyValuePair.Key}={keyValuePair.Value}";
+                index++;
             }
 
             // todo checks for filter
