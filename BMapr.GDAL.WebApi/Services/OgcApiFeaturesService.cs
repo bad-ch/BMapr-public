@@ -253,14 +253,21 @@ namespace BMapr.GDAL.WebApi.Services
                     }
                 }
 
+                long featureCountFiltered;
+
                 if (!string.IsNullOrEmpty(query))
                 {
-                    //layer.SetAttributeFilter($"{featureList.IdFieldName} IN ({string.Join(',', featureList.Bodies.Select(x => $"'{x.Id}'"))})");
+                    layer.SetAttributeFilter(query); //$"{featureList.IdFieldName} IN ({string.Join(',', featureList.Bodies.Select(x => $"'{x.Id}'"))})"
+
+                    featureCountFiltered = layer.GetFeatureCount(1);
+
+                }
+                else
+                {
+                    featureCountFiltered = layer.GetFeatureCount(1) - 1; 
                 }
 
-                var featureCountFiltered = layer.GetFeatureCount(1);
-                
-                featureCollection.NumberMatched = featureCountFiltered - 1;
+                featureCollection.NumberMatched = featureCountFiltered;
 
                 result.Messages.Add($"feature count with filter {featureCountFiltered}");
 
