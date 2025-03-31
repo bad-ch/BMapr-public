@@ -187,7 +187,7 @@ namespace BMapr.GDAL.WebApi.Services.schemaWfs110
             {
                 // <<MODIFICATION>>
                 var nodes = value as XmlNode[];
-                if (nodes.Length == 1)
+                if (nodes != null && nodes.Length == 1)
                 {
                     this.valueField = nodes[0].ParentNode.InnerXml;
                     return;
