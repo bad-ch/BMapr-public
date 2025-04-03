@@ -1,4 +1,4 @@
-﻿using BMapr.GDAL.WebApi.Models;
+using BMapr.GDAL.WebApi.Models;
 using Microsoft.Extensions.Caching.Memory;
 using OSGeo.MapServer;
 
@@ -72,6 +72,12 @@ namespace BMapr.GDAL.WebApi.Services
             }
 
             var resultServerConfig = GetServerConfig(File.ReadAllText(mapPath));
+
+            if (!resultServerConfig.Succesfully)
+            {
+                throw new Exception(string.Join("|", resultServerConfig.Messages));
+            }
+
             resultServerConfig.Value.MapPath = mapPath;
 
             var result = new Result<MapConfig>();
