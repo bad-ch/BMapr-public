@@ -1,4 +1,4 @@
-﻿using BMapr.GDAL.WebApi.Models;
+using BMapr.GDAL.WebApi.Models;
 using Microsoft.AspNetCore.Mvc;
 using OSGeo.MapServer;
 using System.Web;
@@ -85,35 +85,38 @@ namespace BMapr.GDAL.WebApi.Services
             {
                 map = new mapObj(mapConfig.MapPath);
 
-                if (requestType == RequestType.Get)
+                lock (map)
                 {
-                    req.type = MS_REQUEST_TYPE.MS_GET_REQUEST;
-                    req.loadParamsFromURL(queryString);
-                }
-                else
-                {
-                    req.type = MS_REQUEST_TYPE.MS_POST_REQUEST;
-                    req.contenttype = bodyContentType;
-                    req.postrequest = body;
-                }
+                    if (requestType == RequestType.Get)
+                    {
+                        req.type = MS_REQUEST_TYPE.MS_GET_REQUEST;
+                        req.loadParamsFromURL(queryString);
+                    }
+                    else
+                    {
+                        req.type = MS_REQUEST_TYPE.MS_POST_REQUEST;
+                        req.contenttype = bodyContentType;
+                        req.postrequest = body;
+                    }
 
-                mapscript.msIO_installStdoutToBuffer();
+                    mapscript.msIO_installStdoutToBuffer();
 
-                int result = map.OWSDispatch(req);
+                    var result = map.OWSDispatch(req);
 
-                if (result != 0)
-                {
+                    if (result != 0)
+                    {
+                        map.Dispose();
+                        req.Dispose();
+                        mapscript.msIO_resetHandlers();
+                        return new BadRequestObjectResult("Wrong result from map");
+                    }
+
+                    contentType = mapscript.msIO_stripStdoutBufferContentType().Split(';')[0];
+                    contentBytes = mapscript.msIO_getStdoutBufferBytes();
                     map.Dispose();
                     req.Dispose();
                     mapscript.msIO_resetHandlers();
-                    return new BadRequestObjectResult("Wrong result from map");
                 }
-
-                contentType = mapscript.msIO_stripStdoutBufferContentType().Split(';')[0];
-                contentBytes = mapscript.msIO_getStdoutBufferBytes();
-                map.Dispose();
-                req.Dispose();
-                mapscript.msIO_resetHandlers();
             }
             catch (Exception ex)
             {
