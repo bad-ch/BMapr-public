@@ -9,6 +9,7 @@ using System.Net;
 using System.Text;
 using Newtonsoft.Json.Serialization;
 using System.Diagnostics;
+using System.Web;
 
 namespace BMapr.GDAL.WebApi.Controllers
 {
@@ -21,7 +22,8 @@ namespace BMapr.GDAL.WebApi.Controllers
     {
         private readonly ILogger<SpatialController> _logger;
 
-        public SpatialController(ILogger<SpatialController> logger, IConfiguration iConfig, IWebHostEnvironment environment) : base(iConfig, environment)
+        public SpatialController(ILogger<SpatialController> logger, IConfiguration iConfig, IWebHostEnvironment environment)
+            : base(iConfig, environment)
         {
             _logger = logger;
         }
@@ -55,7 +57,7 @@ namespace BMapr.GDAL.WebApi.Controllers
             }
 
             var dataPath = Config.DataProject(project);
-            var filePath = Path.Combine(dataPath.FullName,file);
+            var filePath = Path.Combine(dataPath.FullName, file);
 
             if (!System.IO.File.Exists(filePath))
             {
@@ -120,14 +122,14 @@ namespace BMapr.GDAL.WebApi.Controllers
             }
 
             var dataPath = Config.DataProject(project);
-            var filePath = Path.Combine(dataPath.FullName, file);
+            var filePath = Path.Combine(dataPath.FullName, HttpUtility.UrlDecode(file));
 
             if (!System.IO.File.Exists(filePath))
             {
                 return NotFound($"file {file} not found");
             }
 
-            var extension = formatTarget.ToLower() == "none" ? (new FileInfo(filePath)).Extension : $".{formatTarget}";
+            var extension = formatTarget.ToLower() == "none" ? new FileInfo(filePath).Extension : $".{formatTarget}";
             var filePathTarget = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}{extension}");
 
             var status = GisDataService.Convert(filePath, filePathTarget, epsgSource, epsgTarget);
@@ -140,8 +142,8 @@ namespace BMapr.GDAL.WebApi.Controllers
             //todo add an intelligent cache mechanism
 
             var mimeType = FileService.GetMimeType(filePath);
-            
-            return new FileContentResult(System.IO.File.ReadAllBytes(filePathTarget), new MediaTypeHeaderValue(mimeType) );
+
+            return new FileContentResult(System.IO.File.ReadAllBytes(filePathTarget), new MediaTypeHeaderValue(mimeType));
         }
 
         /// <summary>
@@ -187,7 +189,7 @@ namespace BMapr.GDAL.WebApi.Controllers
         [HttpGet("Information/{project}/{file}")]
         public ActionResult GetInformation(string project, string file)
         {
-            List<string> result = new List<string>();
+            var result = new List<string>();
 
             var gdalPath = Path.Combine(Config.AssemblyPath?.FullName, "gdal/x64");
             System.Environment.SetEnvironmentVariable("PATH", gdalPath, EnvironmentVariableTarget.Process);
@@ -211,7 +213,7 @@ namespace BMapr.GDAL.WebApi.Controllers
                 Console.WriteLine("starting");
                 process.Start();
                 process.BeginOutputReadLine();
-                process.BeginErrorReadLine();     // (optional) wait up to 10 seconds  
+                process.BeginErrorReadLine(); // (optional) wait up to 10 seconds  
                 do
                 {
                     if (!process.HasExited)
@@ -222,7 +224,6 @@ namespace BMapr.GDAL.WebApi.Controllers
                     }
                 }
                 while (!process.WaitForExit(1000));
-
             }
 
             return new ContentResult() { Content = string.Join(string.Empty, result), ContentType = "text/plain", StatusCode = 200 }; //ContentType = "application/json"
@@ -255,6 +256,7 @@ namespace BMapr.GDAL.WebApi.Controllers
                 {
                     return NotFound("no crs definitions found");
                 }
+
                 crsDefinitionFound = crsDefinitions.FirstOrDefault(x => x.Epsg == epsg);
                 if (crsDefinitionFound == null)
                 {
@@ -264,12 +266,12 @@ namespace BMapr.GDAL.WebApi.Controllers
             catch (Exception ex)
             {
                 _logger.LogError($"DES error: {pathCrsFile}, {ex.Message}");
-                return StatusCode(500,"crs definitions DES error");
+                return StatusCode(500, "crs definitions DES error");
             }
 
             var contractResolver = new DefaultContractResolver
             {
-                NamingStrategy = new CamelCaseNamingStrategy()
+                NamingStrategy = new CamelCaseNamingStrategy(),
             };
 
             var content = JsonConvert.SerializeObject(
@@ -278,11 +280,11 @@ namespace BMapr.GDAL.WebApi.Controllers
                 new JsonSerializerSettings()
                 {
                     ContractResolver = contractResolver,
-                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
                 }
             );
 
-            return new ContentResult() { Content = content, ContentType = "application/json", StatusCode = 200};
+            return new ContentResult() { Content = content, ContentType = "application/json", StatusCode = 200 };
         }
     }
 }
