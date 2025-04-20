@@ -4,9 +4,6 @@ using BMapr.GDAL.WebApi.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;
 using Newtonsoft.Json;
-using Serilog;
-using System.Net;
-using System.Text;
 using Newtonsoft.Json.Serialization;
 using System.Diagnostics;
 using System.Web;
@@ -99,6 +96,32 @@ namespace BMapr.GDAL.WebApi.Controllers
             }
 
             return new FileContentResult(System.IO.File.ReadAllBytes(filePath), mimeType);
+        }
+
+        /// <summary>
+        /// Get file as partial stream
+        /// </summary>
+        /// <returns>Deliver Protomap tiles data</returns>
+        [HttpGet("{project}/{file}/pmtiles")]
+        public ActionResult GetPmTile(string project, string file)
+        {
+            var dataPath = Config.DataProject(project);
+            var filePath = Path.Combine(dataPath.FullName, HttpUtility.UrlDecode(file));
+
+            if (!System.IO.File.Exists(filePath))
+            {
+                return NotFound($"file {file} not found");
+            }
+
+            var mimeType = FileService.GetMimeType(filePath);
+            var extension = FileService.GetExtension(filePath);
+
+            if (mimeType == null || extension != ".pmtiles")
+            {
+                return BadRequest($"only pm tiles are supported");
+            }
+
+            return File(new FileStream(filePath,FileMode.Open, FileAccess.Read, FileShare.Read), "application/octet-stream", true);
         }
 
         /// <summary>

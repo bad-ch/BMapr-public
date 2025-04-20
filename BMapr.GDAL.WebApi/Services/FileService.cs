@@ -64,6 +64,8 @@ namespace BMapr.GDAL.WebApi.Services
                     return "application/vnd.google-earth.kmz";
                 case ".txt":
                     return "text/plain";
+                case ".pmtiles":
+                    return "application/octet-stream";
                 case ".gpkg":
                     return "application/geopackage+sqlite3";
                 case ".fgb":
