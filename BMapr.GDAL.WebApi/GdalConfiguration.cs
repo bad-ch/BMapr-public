@@ -11,9 +11,11 @@ namespace BMapr.GDAL.WebApi
         private static bool _configuredOgr;
         private static bool _configuredGdal;
         private static bool _iniPath;
+        private static Dictionary<string, string> _gdalPaths = new();
 
         private static string _usedPath { get; set; }
         public static string UsedPath => _usedPath;
+        public static Dictionary<string, string> GdalPaths => _gdalPaths;
 
         /// <summary>
         /// set path, par example testing
@@ -68,28 +70,47 @@ namespace BMapr.GDAL.WebApi
             var path = Environment.GetEnvironmentVariable("PATH");
             path = nativePath + ";" + Path.Combine(nativePath, "plugins") + ";" + path;
             Environment.SetEnvironmentVariable("PATH", path);
+            AddPath("PATH", nativePath + ";" + Path.Combine(nativePath, "plugins"));
 
             var gdalData = Path.Combine(gdalPath, "data");
             Environment.SetEnvironmentVariable("GDAL_DATA", gdalData);
             Gdal.SetConfigOption("GDAL_DATA", gdalData);
-
+            AddPath("GDAL_DATA", gdalData);
 
             var driverPath = Path.Combine(nativePath, "plugins");
             Environment.SetEnvironmentVariable("GDAL_DRIVER_PATH", driverPath);
             Gdal.SetConfigOption("GDAL_DRIVER_PATH", driverPath);
+            AddPath("GDAL_DRIVER_PATH", driverPath);
 
             Environment.SetEnvironmentVariable("GEOTIFF_CSV", gdalData);
             Gdal.SetConfigOption("GEOTIFF_CSV", gdalData);
+            AddPath("GEOTIFF_CSV", gdalData);
 
             var projSharePath = Path.Combine(gdalPath, "share");
+
             Environment.SetEnvironmentVariable("PROJ_LIB", projSharePath);
             Gdal.SetConfigOption("PROJ_LIB", projSharePath);
+            AddPath("PROJ_LIB", projSharePath);
+
+            Environment.SetEnvironmentVariable("PROJ_DATA", projSharePath);
+            Gdal.SetConfigOption("PROJ_DATA", projSharePath);
+            AddPath("PROJ_DATA", projSharePath);
 
             Osr.SetPROJSearchPath(projSharePath);
 
             _iniPath = true;
 
             return nativePath;
+        }
+
+        private static void AddPath(string key, string value)
+        {
+            if (_gdalPaths.ContainsKey(key))
+            {
+                return;
+            }
+
+            _gdalPaths.Add(key,value);
         }
 
         /// <summary>

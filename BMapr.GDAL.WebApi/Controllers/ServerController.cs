@@ -77,6 +77,7 @@ namespace BMapr.GDAL.WebApi.Controllers
                             ApplicationRoot = Config.ApplicationRoot?.FullName,
                             Projects = Config.DataProjects?.FullName,
                         },
+                        Environment = GdalConfiguration.GdalPaths,
                         WebApplication = Request.PathBase,
                     },
                     Gdal = new
