@@ -46,7 +46,7 @@ namespace BMapr.GDAL.WebApi.Controllers
 
             // no alternate format supported
 
-            if (f.ToLower() != "application/json")
+            if (f.ToLower() != "application/json" && f.ToLower() != "json")
             {
                 return BadRequest("OGC API format not supported");
             }
@@ -152,7 +152,7 @@ namespace BMapr.GDAL.WebApi.Controllers
         {
             // no alternate format supported
 
-            if (f.ToLower() != "application/json")
+            if (f.ToLower() != "application/json" && f.ToLower() != "json")
             {
                 return BadRequest("OGC API format not supported");
             }
@@ -170,8 +170,15 @@ namespace BMapr.GDAL.WebApi.Controllers
             {
                 conformsTo = new List<string>()
                 {
-                    "http://www.opengis.net/spec/ogcapi-features-1/1.1/conf/core",
-                    "http://www.opengis.net/spec/ogcapi-features-1/1.1/conf/geojson"
+                    "http://www.opengis.net/spec/ogcapi-common-1/1.0/conf/core",
+                    "http://www.opengis.net/spec/ogcapi-common-1/1.0/conf/json",
+                    "http://www.opengis.net/spec/ogcapi-common-1/1.0/conf/landing-page",
+                    "http://www.opengis.net/spec/ogcapi-common-2/1.0/conf/collections",
+                    "http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/core",
+                    "http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/geojson",
+                    "http://www.opengis.net/spec/ogcapi-features-2/1.0/conf/crs",
+                    "http://www.opengis.net/spec/ogcapi-features-3/1.0/conf/queryables",
+                    "http://www.opengis.net/spec/ogcapi-features-5/1.0/conf/schemas",
                 }
             };
 
@@ -191,7 +198,7 @@ namespace BMapr.GDAL.WebApi.Controllers
         {
             // no alternate format supported
 
-            if (f.ToLower() != "application/json")
+            if (f.ToLower() != "application/json" && f.ToLower() != "json")
             {
                 return BadRequest("OGC API format not supported");
             }
@@ -233,7 +240,7 @@ namespace BMapr.GDAL.WebApi.Controllers
         {
             // no alternate format supported
 
-            if (f.ToLower() != "application/json")
+            if (f.ToLower() != "application/json" && f.ToLower() != "json")
             {
                 return BadRequest("OGC API format not supported");
             }

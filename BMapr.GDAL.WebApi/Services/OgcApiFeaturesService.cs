@@ -149,19 +149,33 @@ namespace BMapr.GDAL.WebApi.Services
             var featureCollection = new FeatureCollection() { Type = "FeatureCollection" };
             var result = new Result<FeatureCollection>();
             int crsOut = 0;
+            int crsBboxOut = 0;
 
             featureCollection.Name = collectionId;
 
-            if (string.IsNullOrEmpty(crs))
+            if (string.IsNullOrEmpty(crs) || crs.ToLower().Contains("wgs84") || crs.ToLower().Contains("crs84"))
             {
                 // todo check whether allowed
-                featureCollection.Crs = "http://www.opengis.net/def/crs/OGC/1.3/CRS84"; //"http://www.opengis.net/def/crs/EPSG/0/2056";
+                featureCollection.Crs = "http://www.opengis.net/def/crs/OGC/1.3/CRS84";
                 crsOut = 4326;
             }
             else
             {
                 featureCollection.Crs = crs;
                 crsOut = Convert.ToInt32(crs.ToLowerInvariant().Replace("http://www.opengis.net/def/crs/epsg/0/", ""));
+            }
+
+            if (string.IsNullOrEmpty(bboxCrs))
+            {
+                crsBboxOut = crsOut;
+            }
+            else if (bboxCrs.ToLower().Contains("wgs84") || bboxCrs.ToLower().Contains("crs84"))
+            {
+                crsBboxOut = 4326;
+            }
+            else
+            {
+                crsBboxOut = Convert.ToInt32(bboxCrs.ToLowerInvariant().Replace("http://www.opengis.net/def/crs/epsg/0/", ""));
             }
 
             for (int layerIndex = 0; layerIndex < layerCount; layerIndex++)
@@ -206,7 +220,7 @@ namespace BMapr.GDAL.WebApi.Services
 
                     if (bbox.Count == 4)
                     {
-                        if (crsOut == 4326)
+                        if (crsBboxOut == 4326)
                         {
                             geometryBbox = Geometry.CreateFromWkt($"POLYGON(({bbox[1]} {bbox[0]}, {bbox[1]} {bbox[2]},{bbox[3]} {bbox[2]}, {bbox[3]} {bbox[0]}, {bbox[1]} {bbox[0]}))");
                         }
@@ -215,10 +229,10 @@ namespace BMapr.GDAL.WebApi.Services
                             geometryBbox = Geometry.CreateFromWkt($"POLYGON(({bbox[0]} {bbox[1]}, {bbox[2]} {bbox[1]},{bbox[2]} {bbox[3]}, {bbox[0]} {bbox[3]}, {bbox[0]} {bbox[1]}))");
                         }
 
-                        if (crsOut != crsSrc)
+                        if (crsBboxOut != crsSrc)
                         {
-                            var outCrs = new OSGeo.OSR.SpatialReference("");
-                            outCrs.ImportFromEPSG(crsOut);
+                            var outBboxCrs = new OSGeo.OSR.SpatialReference("");
+                            outBboxCrs.ImportFromEPSG(crsBboxOut);
                             //var t1 = outCrs.GetAxisOrientation(null, 0);
                             //var t2 = outCrs.GetAxisOrientation(null, 1);
 
@@ -228,8 +242,8 @@ namespace BMapr.GDAL.WebApi.Services
                             //var t3 = srcCrs.GetAxisOrientation(null, 0);
                             //var t4 = srcCrs.GetAxisOrientation(null, 1);
 
-                            var coordTransBbox = new OSGeo.OSR.CoordinateTransformation(outCrs, srcCrs);
-                            
+                            var coordTransBbox = new OSGeo.OSR.CoordinateTransformation(outBboxCrs, srcCrs);
+
                             geometryBbox.Transform(coordTransBbox);
                         }
 
@@ -264,7 +278,7 @@ namespace BMapr.GDAL.WebApi.Services
                 }
                 else
                 {
-                    featureCountFiltered = layer.GetFeatureCount(1) - 1; 
+                    featureCountFiltered = layer.GetFeatureCount(1) - 1;
                 }
 
                 featureCollection.NumberMatched = featureCountFiltered;
@@ -338,7 +352,7 @@ namespace BMapr.GDAL.WebApi.Services
                         srcCrs.ImportFromEPSG(crsSrc);
 
                         var outCrs = new OSGeo.OSR.SpatialReference("");
-                        outCrs.ImportFromEPSG(4326);
+                        outCrs.ImportFromEPSG(crsOut);
 
                         var coordTrans = new OSGeo.OSR.CoordinateTransformation(srcCrs, outCrs);
 
