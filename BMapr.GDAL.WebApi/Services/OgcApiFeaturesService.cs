@@ -75,6 +75,7 @@ namespace BMapr.GDAL.WebApi.Services
             {
                 Id = item.Name,
                 Title = item.Name, // todo introduce metadata tag
+                Description = item.Name, // todo introduce metadata tag
                 Extent = new Extent()
                 {
                     Temporal = new Temporal(),

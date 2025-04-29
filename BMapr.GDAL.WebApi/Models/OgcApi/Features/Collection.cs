@@ -1,5 +1,4 @@
-﻿using BMapr.GDAL.WebApi.Models.Spatial;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using System.Text.Json.Serialization;
 
 namespace BMapr.GDAL.WebApi.Models.OgcApi.Features
@@ -13,6 +12,10 @@ namespace BMapr.GDAL.WebApi.Models.OgcApi.Features
         [JsonProperty("title")]
         [JsonPropertyName("title")]
         public string Title;
+
+        [JsonProperty("description")]
+        [JsonPropertyName("description")]
+        public string Description;
 
         [JsonProperty("extent")]
         [JsonPropertyName("extent")]
