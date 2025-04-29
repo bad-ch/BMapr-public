@@ -252,7 +252,7 @@ namespace BMapr.GDAL.WebApi.Services
                         case "System.String":
                         case "System.Char":
                         case "System.Guid":
-                            properties.Add(GetFieldValue(field, $"'{column.Value}'"));
+                            properties.Add(GetFieldValue(field, column.Value == null ? "NULL" : $"'{column.Value}'"));
                             break;
                         case "System.Boolean":
                         case "System.Byte":
@@ -268,13 +268,13 @@ namespace BMapr.GDAL.WebApi.Services
                         case "System.UInt64":
                         case "System.Int16":
                         case "System.UInt16":
-                            properties.Add(GetFieldValue(field, $"{column.Value}"));
+                            properties.Add(GetFieldValue(field, column.Value == null ? "NULL" : $"{column.Value}"));
                             break;
                         case "System.DateTime":
-                            properties.Add(GetFieldValue(field, $"'{column.Value}'")); // todo check
+                            properties.Add(GetFieldValue(field, column.Value == null ? "NULL" : $"'{column.Value}'")); // todo check
                             break;
                         case "System.DateTimeOffset":
-                            properties.Add(GetFieldValue(field, $"CAST('{column.Value}' AS DATETIMEOFFSET)"));
+                            properties.Add(GetFieldValue(field, column.Value == null ? "NULL" : $"CAST('{column.Value}' AS DATETIMEOFFSET)"));
                             break;
                         default:
                             throw new Exception($"Type not found {field.Name}");
