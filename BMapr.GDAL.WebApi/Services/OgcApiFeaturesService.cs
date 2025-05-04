@@ -154,29 +154,37 @@ namespace BMapr.GDAL.WebApi.Services
 
             featureCollection.Name = collectionId;
 
-            if (string.IsNullOrEmpty(crs) || crs.ToLower().Contains("wgs84") || crs.ToLower().Contains("crs84"))
+            if (string.IsNullOrEmpty(crs))
             {
-                // todo check whether allowed
-                featureCollection.Crs = "http://www.opengis.net/def/crs/OGC/1.3/CRS84";
-                crsOut = 4326;
+                if (!string.IsNullOrEmpty(bboxCrs))
+                {
+                    result.AddMessage("Takeover CRS from bbox");
+                    featureCollection.Crs = bboxCrs;
+                    crsOut = ProjectionService.getEPSGCode(bboxCrs);
+                }
+                else
+                {
+                    result.AddMessage("Set CRS as default to WGS84");
+                    featureCollection.Crs = "http://www.opengis.net/def/crs/OGC/1.3/CRS84";
+                    crsOut = 4326;
+                }
             }
             else
             {
+                result.AddMessage("Set CRS from request");
                 featureCollection.Crs = crs;
-                crsOut = Convert.ToInt32(crs.ToLowerInvariant().Replace("http://www.opengis.net/def/crs/epsg/0/", ""));
+                crsOut = ProjectionService.getEPSGCode(crs);
             }
 
             if (string.IsNullOrEmpty(bboxCrs))
             {
+                result.AddMessage("Set BBox-CRS from CRS");
                 crsBboxOut = crsOut;
-            }
-            else if (bboxCrs.ToLower().Contains("wgs84") || bboxCrs.ToLower().Contains("crs84"))
-            {
-                crsBboxOut = 4326;
             }
             else
             {
-                crsBboxOut = Convert.ToInt32(bboxCrs.ToLowerInvariant().Replace("http://www.opengis.net/def/crs/epsg/0/", ""));
+                result.AddMessage("Set BBox-CRS from request");
+                crsBboxOut = ProjectionService.getEPSGCode(bboxCrs);
             }
 
             for (int layerIndex = 0; layerIndex < layerCount; layerIndex++)
