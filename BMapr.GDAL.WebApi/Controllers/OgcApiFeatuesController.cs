@@ -373,6 +373,8 @@ namespace BMapr.GDAL.WebApi.Controllers
 
             var featureCollection = OgcApiFeaturesService.GetItems(Config, project, collectionId, bboxDouble, bboxCrs, crs, query, offset,limit, f);
 
+            // todo add messages and exceptions from result to log
+
             var content = JsonConvert.SerializeObject(featureCollection.Value);
 
             if (file)

@@ -123,7 +123,6 @@ namespace BMapr.GDAL.WebApi.Services
             return new Result<Collection>(){Value = collection, Succesfully = true};
         }
 
-        // todo return value
         public static Result<FeatureCollection> GetItems(Config config, string project, string collectionId, List<double> bbox, string? bboxCrs, string? crs, string query, int? offset, int? limit, string f)
         {
             var mapMetadata = MapFileService.GetMapFromProject(project, config);
