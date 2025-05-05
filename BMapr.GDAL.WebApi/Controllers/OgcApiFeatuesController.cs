@@ -311,7 +311,7 @@ namespace BMapr.GDAL.WebApi.Controllers
 
             if (!string.IsNullOrEmpty(crs))
             {
-                if (!(crs.ToLower().StartsWith("http://www.opengis.net/def/crs/epsg/0/") || crs == "http://www.opengis.net/def/crs/ogc/1.3/crs84"))
+                if (!(crs.ToLower().StartsWith("http://www.opengis.net/def/crs/epsg/0/") || crs.ToLower() == "http://www.opengis.net/def/crs/ogc/1.3/crs84"))
                 {
                     return BadRequest("OGC API feature, bad CRS definition");
                 }
