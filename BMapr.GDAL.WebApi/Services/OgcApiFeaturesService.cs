@@ -118,12 +118,13 @@ namespace BMapr.GDAL.WebApi.Services
 
             collection.Links.Add(new Link() { Rel = "self", Title = "This collection", Type = "application/json", Href = $"{urlCollections}/{item.Name}" });
             collection.Links.Add(new Link() { Rel = "items", Title = $"{item.Name} as GeoJSON", Type = "application/geo+json", Href = $"{urlCollections}/{item.Name}/items?f=geojson" });
+            collection.Links.Add(new Link() { Rel = "queryable", Title = $"Get available attributes", Type = "application/schema+json", Href = $"{urlCollections}/{item.Name}/queryables?f=json" });
             //collection.Links.Add(new Link() { Rel = "describedby", Title = $"Schema for {item.Name}", Type = "application/json", Href = $"{urlCollections}/{item.Name}/schema?f=application/json" });
 
             return new Result<Collection>(){Value = collection, Succesfully = true};
         }
 
-        public static Result<FeatureCollection> GetItems(Config config, string project, string collectionId, List<double> bbox, string? bboxCrs, string? crs, string query, int? offset, int? limit, string f)
+        public static Result<FeatureCollection> GetItems(Config config, string project, string collectionId, List<double> bbox, string? bboxCrs, string? crs, string query, string filter, int? offset, int? limit, string f)
         {
             var mapMetadata = MapFileService.GetMapFromProject(project, config);
 
@@ -279,10 +280,13 @@ namespace BMapr.GDAL.WebApi.Services
 
                 if (!string.IsNullOrEmpty(query))
                 {
-                    layer.SetAttributeFilter(query); //$"{featureList.IdFieldName} IN ({string.Join(',', featureList.Bodies.Select(x => $"'{x.Id}'"))})"
-
+                    layer.SetAttributeFilter(query);
                     featureCountFiltered = layer.GetFeatureCount(1);
-
+                }
+                else if (!string.IsNullOrEmpty(filter))
+                {
+                    layer.SetAttributeFilter(filter);
+                    featureCountFiltered = layer.GetFeatureCount(1);
                 }
                 else
                 {

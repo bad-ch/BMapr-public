@@ -2,6 +2,7 @@
 using BMapr.GDAL.WebApi.Models.Spatial;
 using BMapr.GDAL.WebApi.Services;
 using BMapr.WebApi.Controllers;
+using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using Newtonsoft.Json;
@@ -277,7 +278,19 @@ namespace BMapr.GDAL.WebApi.Controllers
         [HttpGet("{project}/collections/{collectionId}/items")]
         [HttpHead("{project}/collections/{collectionId}/items")]
         [HttpOptions("{project}/collections/{collectionId}/items")]
-        public ActionResult Feature(string project, string collectionId, [FromQuery] string? bbox, [FromQuery(Name = "bbox-crs")] string? bboxCrs, [FromQuery] string? crs, [FromQuery] int? offset, [FromQuery] int? limit, [FromQuery] string f = "geojson", [FromQuery] bool file = false)
+        public ActionResult Feature(
+            string project, 
+            string collectionId, 
+            [FromQuery] string? bbox, 
+            [FromQuery(Name = "bbox-crs")] string? bboxCrs, 
+            [FromQuery] string? crs, 
+            [FromQuery] int? offset, 
+            [FromQuery] int? limit,
+            [FromQuery(Name = "filter-lang")] string? filterLang,
+            [FromQuery] string? filter,
+            [FromQuery] string f = "geojson", 
+            [FromQuery] bool file = false
+        )
         {
             if (f.ToLower() != "geojson" && f.ToLower() != "json")
             {
@@ -346,9 +359,19 @@ namespace BMapr.GDAL.WebApi.Controllers
                 }
             }
 
+            if (!string.IsNullOrEmpty(filterLang) && filterLang.ToLower() != "cql-text")
+            {
+                return BadRequest("OGC API filter-lang has to be cql-text");
+            }
+
+            if (!string.IsNullOrEmpty(filterLang) && filterLang.ToLower() == "cql-text" && string.IsNullOrEmpty(filter?.Trim()))
+            {
+                return BadRequest("OGC API filter needs a value because filter-lang is set");
+            }
+
             var queryParameter = Request.Query.ToDictionary(x => x.Key, y => y.Value.ToString());
             var protectedParameters = new List<string>()
-                {"project", "collectionId", "bbox", "bbox-crs", "crs", "offset", "limit", "f", "file"};
+                {"project", "collectionId", "bbox", "bbox-crs", "crs", "offset", "limit", "f", "file","filter-lang","filter"};
             var query = string.Empty;
             var index = 0;
 
@@ -368,10 +391,16 @@ namespace BMapr.GDAL.WebApi.Controllers
                 index++;
             }
 
-            // todo checks for filter
-            _logger.LogInformation($"project {project}, collectionId {collectionId}, bbox: {string.Join(',',bboxDouble.Select(x => x.ToString()))}, query: {query}, offset {offset}, limit {limit}, f: {f}");
+            if (index > 0 && !string.IsNullOrEmpty(filter?.Trim()))
+            {
+                return BadRequest("OGC API to set filter and query don't make sense");
+            }
 
-            var featureCollection = OgcApiFeaturesService.GetItems(Config, project, collectionId, bboxDouble, bboxCrs, crs, query, offset,limit, f);
+            _logger.LogInformation($"project {project}, collectionId {collectionId}, bbox: {string.Join(',',bboxDouble.Select(x => x.ToString()))}, query: {query}, offset {offset}, limit {limit}, f: {f}, filter-lang: {filterLang}, filter: {filter}");
+
+            var url = Request.GetDisplayUrl();
+
+            var featureCollection = OgcApiFeaturesService.GetItems(Config, project, collectionId, bboxDouble, bboxCrs, crs, query, filter, offset,limit, f);
 
             // todo add messages and exceptions from result to log
 
