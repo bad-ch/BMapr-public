@@ -961,6 +961,14 @@ namespace BMapr.GDAL.WebApi.Models.MapFile
         [JsonProperty("msh_IdType")]
         [JsonPropertyName("msh_IdType")]
         public string MshIdType;
+
+        [JsonProperty("oaf_description")]
+        [JsonPropertyName("oaf_description")]
+        public string OafDescription;
+
+        [JsonProperty("oaf_title")]
+        [JsonPropertyName("oaf_title")]
+        public string OafTitle;
     }
 
     public class Mincolor

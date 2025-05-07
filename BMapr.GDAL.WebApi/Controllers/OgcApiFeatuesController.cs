@@ -1,4 +1,6 @@
-﻿using BMapr.GDAL.WebApi.Models.OgcApi.Features;
+﻿using BMapr.GDAL.WebApi.Models.MapFile;
+using BMapr.GDAL.WebApi.Models;
+using BMapr.GDAL.WebApi.Models.OgcApi.Features;
 using BMapr.GDAL.WebApi.Models.Spatial;
 using BMapr.GDAL.WebApi.Services;
 using BMapr.WebApi.Controllers;
@@ -61,10 +63,23 @@ namespace BMapr.GDAL.WebApi.Controllers
 
             Config.Host = HostService.Get(Request, IConfig);
 
+            var mapserverService = new MapserverService(Config, project);
+            var result = mapserverService.GetMetadata(mapserverService.Map);
+            var contentMap = JsonConvert.SerializeObject(
+                result,
+                Formatting.None,
+                new JsonSerializerSettings()
+                {
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+                }
+            );
+
+            var mapFile = JsonConvert.DeserializeObject<MapFile>(contentMap);
+
             var landingPage = new LandingPage()
             {
-                Title = "OGC API features service with OGR/GDAL/Mapserver",
-                Description = "OGC API features service with OGR/GDAL/Mapserver",
+                Title = mapFile?.Web?.Metadata?.OafTitle != null ? mapFile.Web?.Metadata?.OafTitle : "BMapr, OGC API features service",
+                Description = mapFile?.Web?.Metadata?.OafDescription != null ? mapFile.Web?.Metadata?.OafDescription : "BMapr, OGC API features service description with OGR/GDAL/Mapserver",
                 Links = new List<Link>(){
                     new() {
                         Rel = "service",
