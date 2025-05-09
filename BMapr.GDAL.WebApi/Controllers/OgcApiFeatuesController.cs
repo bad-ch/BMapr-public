@@ -415,20 +415,19 @@ namespace BMapr.GDAL.WebApi.Controllers
 
             var url = Request.GetDisplayUrl();
 
-            var featureCollection = OgcApiFeaturesService.GetItems(Config, project, collectionId, bboxDouble, bboxCrs, crs, query, filter, offset,limit, f);
+            var result = OgcApiFeaturesService.GetItems(Config, project, collectionId, bboxDouble, bboxCrs, crs, query, filter, offset,limit, f, url, Request.Host.Host);
 
             // todo add messages and exceptions from result to log
 
-            var content = JsonConvert.SerializeObject(featureCollection.Value);
-
             if (file)
             {
-                return new FileContentResult(Encoding.UTF8.GetBytes(content), "application/geo+json") { FileDownloadName = $"{Guid.NewGuid()}.geojson" };
+                result.Value.FileDownloadName = $"{Guid.NewGuid()}.geojson";
             }
 
-            Response.Headers.Append("Content-Crs", featureCollection.Value.Crs);
+            //todo reactivate
+            //Response.Headers.Append("Content-Crs", featureCollection.Value.Crs);
             
-            return new FileContentResult(Encoding.UTF8.GetBytes(content), "application/geo+json");
+            return result.Value;
         }
 
         [HttpGet("{project}/collections/{collectionId}/queryables")]

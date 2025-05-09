@@ -2,8 +2,10 @@ using BMapr.GDAL.WebApi.Models;
 using BMapr.GDAL.WebApi.Models.MapFile;
 using BMapr.GDAL.WebApi.Models.OgcApi.Features;
 using BMapr.GDAL.WebApi.Models.Spatial;
+using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using OSGeo.OGR;
+using System.Text;
 using Extent = BMapr.GDAL.WebApi.Models.OgcApi.Features.Extent;
 using Feature = OSGeo.OGR.Feature;
 using FeatureCollection = BMapr.GDAL.WebApi.Models.OgcApi.Features.FeatureCollection;
@@ -124,20 +126,29 @@ namespace BMapr.GDAL.WebApi.Services
             return new Result<Collection>(){Value = collection, Succesfully = true};
         }
 
-        public static Result<FeatureCollection> GetItems(Config config, string project, string collectionId, List<double> bbox, string? bboxCrs, string? crs, string query, string filter, int? offset, int? limit, string f)
+        public static Result<FileContentResult> GetItems(Config config, string project, string collectionId, List<double> bbox, string? bboxCrs, string? crs, string query, string filter, int? offset, int? limit, string f, string url, string host)
         {
             var mapMetadata = MapFileService.GetMapFromProject(project, config);
 
             if (!mapMetadata.Succesfully || string.IsNullOrEmpty(mapMetadata.Value.Key) || string.IsNullOrEmpty(mapMetadata.Value.FilePath))
             {
-                return new Result<FeatureCollection>() { Value = null, Succesfully = false, Messages = new List<string>() { "Error getting map metadata" } };
+                return new Result<FileContentResult>() { Value = null, Succesfully = false, Messages = new List<string>() { "Error getting map metadata" } };
             }
 
             var resultMapConfig = MapFileService.GetMapConfigFromCache(mapMetadata.Value.Key, mapMetadata.Value.FilePath, config, project);
 
             if (!resultMapConfig.Succesfully)
             {
-                return new Result<FeatureCollection>(){Value = null, Succesfully = false, Messages = new List<string>(){"Config map not opened successfully"}};
+                return new Result<FileContentResult>(){Value = null, Succesfully = false, Messages = new List<string>(){"Config map not opened successfully"}};
+            }
+
+            var cacheService = new CacheService(config.DataProject(project).FullName, host, "oaf", collectionId);
+
+            var cachedContent = cacheService.GetContent(url);
+
+            if (cachedContent != null)
+            {
+                return new Result<FileContentResult>() {Value = cachedContent};
             }
 
             var mapConfig = resultMapConfig.Value;
@@ -148,7 +159,7 @@ namespace BMapr.GDAL.WebApi.Services
             var dataSource = Ogr.Open(layerConfig.Connection, 0);
             var layerCount = dataSource.GetLayerCount();
             var featureCollection = new FeatureCollection() { Type = "FeatureCollection" };
-            var result = new Result<FeatureCollection>();
+            var result = new Result<FileContentResult>();
             int crsOut = 0;
             int crsBboxOut = 0;
 
@@ -391,9 +402,14 @@ namespace BMapr.GDAL.WebApi.Services
 
             dataSource.Dispose();
 
-            result.Value = featureCollection;
-            result.Succesfully = true;
+            var content = JsonConvert.SerializeObject(featureCollection);
+            var byteContent = Encoding.UTF8.GetBytes(content);
+            var contentType = "application/geo+json";
 
+            cacheService.WriteContent(url, byteContent, contentType);
+
+            result.Value = new FileContentResult(byteContent, contentType);
+            result.Succesfully = true;
             return result;
         }
 
