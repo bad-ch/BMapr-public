@@ -24,9 +24,9 @@ namespace BMapr.GDAL.WebApi.Services
             var content = JsonConvert.SerializeObject(
                 result,
                 Formatting.None,
-                new JsonSerializerSettings()
+                new JsonSerializerSettings
                 {
-                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
                 }
             );
 
@@ -38,7 +38,7 @@ namespace BMapr.GDAL.WebApi.Services
                 collections.CollectionList.Add(resultCollection.Value);
             });
 
-            return new Result<Collections>(){Value = collections, Succesfully = true};
+            return new Result<Collections> { Value = collections, Succesfully = true };
         }
 
         public static Result<Collection> GetCollection(Config config, List<CrsDefinition> crsDefinitions, string project, string collectionId, string urlCollections)
@@ -48,9 +48,9 @@ namespace BMapr.GDAL.WebApi.Services
             var content = JsonConvert.SerializeObject(
                 result,
                 Formatting.None,
-                new JsonSerializerSettings()
+                new JsonSerializerSettings
                 {
-                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
                 }
             );
 
@@ -68,24 +68,24 @@ namespace BMapr.GDAL.WebApi.Services
                 collection = resultCollection.Value;
             });
 
-            return new Result<Collection>() { Value = collection, Succesfully = true };
+            return new Result<Collection> { Value = collection, Succesfully = true };
         }
 
         private static Result<Collection> GetCollectionItem(List<CrsDefinition> crsDefinitions, MapFile mapFile, Models.MapFile.Layer item, string urlCollections)
         {
-            var collection = new Collection()
+            var collection = new Collection
             {
                 Id = item.Name,
                 Title = item.Name, // todo introduce metadata tag
                 Description = item.Name, // todo introduce metadata tag
-                Extent = new Extent()
+                Extent = new Extent
                 {
                     Temporal = new Temporal(),
-                    Spatial = new Spatial()
+                    Spatial = new Spatial
                     {
-                        Crs = "http://www.opengis.net/def/crs/OGC/1.3/CRS84"
-                    }
-                }
+                        Crs = "http://www.opengis.net/def/crs/OGC/1.3/CRS84",
+                    },
+                },
             };
 
             collection.StorageCrs = "http://www.opengis.net/def/crs/OGC/1.3/CRS84"; //$"http://www.opengis.net/def/crs/EPSG/0/{item.Metadata.MshEPSG}";
@@ -109,37 +109,55 @@ namespace BMapr.GDAL.WebApi.Services
 
             if (item.Extent.Minx > 0)
             {
-                collection.Extent.Spatial.Bbox.Add(new List<double>() { item.Extent.Minx, item.Extent.Miny, item.Extent.Maxx, item.Extent.Maxy });
+                collection.Extent.Spatial.Bbox.Add(new List<double> { item.Extent.Minx, item.Extent.Miny, item.Extent.Maxx, item.Extent.Maxy });
             }
             else
             {
                 var crsDefinition = crsDefinitions.First(x => x.Epsg.ToString() == item.Metadata.MshEPSG);
 
-                collection.Extent.Spatial.Bbox.Add(new List<double>() { crsDefinition.WestBoundLon, crsDefinition.SouthBoundLat, crsDefinition.EastBoundLon, crsDefinition.NorthBoundLat });
+                collection.Extent.Spatial.Bbox.Add(new List<double>
+                    { crsDefinition.WestBoundLon, crsDefinition.SouthBoundLat, crsDefinition.EastBoundLon, crsDefinition.NorthBoundLat });
             }
 
-            collection.Links.Add(new Link() { Rel = "self", Title = "This collection", Type = "application/json", Href = $"{urlCollections}/{item.Name}" });
-            collection.Links.Add(new Link() { Rel = "items", Title = $"{item.Name} as GeoJSON", Type = "application/geo+json", Href = $"{urlCollections}/{item.Name}/items?f=geojson" });
-            collection.Links.Add(new Link() { Rel = "queryable", Title = $"Get available attributes", Type = "application/schema+json", Href = $"{urlCollections}/{item.Name}/queryables?f=json" });
+            collection.Links.Add(new Link { Rel = "self", Title = "This collection", Type = "application/json", Href = $"{urlCollections}/{item.Name}" });
+            collection.Links.Add(new Link
+                { Rel = "items", Title = $"{item.Name} as GeoJSON", Type = "application/geo+json", Href = $"{urlCollections}/{item.Name}/items?f=geojson" });
+            collection.Links.Add(new Link
+                { Rel = "queryables", Title = $"Get available attributes", Type = "application/schema+json", Href = $"{urlCollections}/{item.Name}/queryables?f=json" });
+
+
             //collection.Links.Add(new Link() { Rel = "describedby", Title = $"Schema for {item.Name}", Type = "application/json", Href = $"{urlCollections}/{item.Name}/schema?f=application/json" });
 
-            return new Result<Collection>(){Value = collection, Succesfully = true};
+            return new Result<Collection> { Value = collection, Succesfully = true };
         }
 
-        public static Result<FileContentResult> GetItems(Config config, string project, string collectionId, List<double> bbox, string? bboxCrs, string? crs, string query, string filter, int? offset, int? limit, string f, string url, string host)
+        public static Result<FileContentResult> GetItems(
+            Config config,
+            string project,
+            string collectionId,
+            List<double> bbox,
+            string? bboxCrs,
+            string? crs,
+            string query,
+            string filter,
+            int? offset,
+            int? limit,
+            string f,
+            string url,
+            string host)
         {
             var mapMetadata = MapFileService.GetMapFromProject(project, config);
 
             if (!mapMetadata.Succesfully || string.IsNullOrEmpty(mapMetadata.Value.Key) || string.IsNullOrEmpty(mapMetadata.Value.FilePath))
             {
-                return new Result<FileContentResult>() { Value = null, Succesfully = false, Messages = new List<string>() { "Error getting map metadata" } };
+                return new Result<FileContentResult> { Value = null, Succesfully = false, Messages = new List<string> { "Error getting map metadata" } };
             }
 
             var resultMapConfig = MapFileService.GetMapConfigFromCache(mapMetadata.Value.Key, mapMetadata.Value.FilePath, config, project);
 
             if (!resultMapConfig.Succesfully)
             {
-                return new Result<FileContentResult>(){Value = null, Succesfully = false, Messages = new List<string>(){"Config map not opened successfully"}};
+                return new Result<FileContentResult> { Value = null, Succesfully = false, Messages = new List<string> { "Config map not opened successfully" } };
             }
 
             var cacheService = new CacheService(config.DataProject(project).FullName, host, "oaf", collectionId);
@@ -148,7 +166,7 @@ namespace BMapr.GDAL.WebApi.Services
 
             if (cachedContent != null)
             {
-                return new Result<FileContentResult>() {Value = cachedContent};
+                return new Result<FileContentResult> { Value = cachedContent };
             }
 
             var mapConfig = resultMapConfig.Value;
@@ -158,10 +176,10 @@ namespace BMapr.GDAL.WebApi.Services
 
             var dataSource = Ogr.Open(layerConfig.Connection, 0);
             var layerCount = dataSource.GetLayerCount();
-            var featureCollection = new FeatureCollection() { Type = "FeatureCollection" };
+            var featureCollection = new FeatureCollection { Type = "FeatureCollection" };
             var result = new Result<FileContentResult>();
-            int crsOut = 0;
-            int crsBboxOut = 0;
+            var crsOut = 0;
+            var crsBboxOut = 0;
 
             featureCollection.Name = collectionId;
 
@@ -198,7 +216,7 @@ namespace BMapr.GDAL.WebApi.Services
                 crsBboxOut = ProjectionService.getEPSGCode(bboxCrs);
             }
 
-            for (int layerIndex = 0; layerIndex < layerCount; layerIndex++)
+            for (var layerIndex = 0; layerIndex < layerCount; layerIndex++)
             {
                 //if (layer.GetName() != collectionId)
                 //{
@@ -214,7 +232,7 @@ namespace BMapr.GDAL.WebApi.Services
 
                 var authorityCode = spatialRef.GetAuthorityCode("PROJCS");
 
-                int crsSrc = 0;
+                var crsSrc = 0;
 
                 if (!string.IsNullOrEmpty(authorityCode))
                 {
@@ -242,11 +260,13 @@ namespace BMapr.GDAL.WebApi.Services
                     {
                         if (crsBboxOut == 4326)
                         {
-                            geometryBbox = Geometry.CreateFromWkt($"POLYGON(({bbox[1]} {bbox[0]}, {bbox[1]} {bbox[2]},{bbox[3]} {bbox[2]}, {bbox[3]} {bbox[0]}, {bbox[1]} {bbox[0]}))");
+                            geometryBbox = Geometry.CreateFromWkt(
+                                $"POLYGON(({bbox[1]} {bbox[0]}, {bbox[1]} {bbox[2]},{bbox[3]} {bbox[2]}, {bbox[3]} {bbox[0]}, {bbox[1]} {bbox[0]}))");
                         }
                         else
                         {
-                            geometryBbox = Geometry.CreateFromWkt($"POLYGON(({bbox[0]} {bbox[1]}, {bbox[2]} {bbox[1]},{bbox[2]} {bbox[3]}, {bbox[0]} {bbox[3]}, {bbox[0]} {bbox[1]}))");
+                            geometryBbox = Geometry.CreateFromWkt(
+                                $"POLYGON(({bbox[0]} {bbox[1]}, {bbox[2]} {bbox[1]},{bbox[2]} {bbox[3]}, {bbox[0]} {bbox[3]}, {bbox[0]} {bbox[1]}))");
                         }
 
                         if (crsBboxOut != crsSrc)
@@ -279,7 +299,8 @@ namespace BMapr.GDAL.WebApi.Services
                     else if (bbox.Count == 6)
                     {
                         throw new NotImplementedException("bbox with 6 values not implemented");
-                        layer.SetSpatialFilter(Geometry.CreateFromWkt($"POLYGON(({bbox[0]} {bbox[1]}, {bbox[3]} {bbox[1]},{bbox[3]} {bbox[4]}, {bbox[0]} {bbox[4]}, {bbox[0]} {bbox[1]}))"));
+                        layer.SetSpatialFilter(
+                            Geometry.CreateFromWkt($"POLYGON(({bbox[0]} {bbox[1]}, {bbox[3]} {bbox[1]},{bbox[3]} {bbox[4]}, {bbox[0]} {bbox[4]}, {bbox[0]} {bbox[1]}))"));
                     }
                     else
                     {
@@ -357,7 +378,7 @@ namespace BMapr.GDAL.WebApi.Services
                         limitCount++;
                     }
 
-                    var featureCls = new Models.OgcApi.Features.Feature() { Type = "Feature" };
+                    var featureCls = new Models.OgcApi.Features.Feature { Type = "Feature" };
                     var geometry = feature.GetGeometryRef();
 
                     if (geometry == null)
@@ -419,14 +440,14 @@ namespace BMapr.GDAL.WebApi.Services
 
             if (!mapMetadata.Succesfully || string.IsNullOrEmpty(mapMetadata.Value.Key) || string.IsNullOrEmpty(mapMetadata.Value.FilePath))
             {
-                return new Result<Schema>() { Value = null, Succesfully = false, Messages = new List<string>() { "Error getting map metadata" } };
+                return new Result<Schema> { Value = null, Succesfully = false, Messages = new List<string> { "Error getting map metadata" } };
             }
 
             var resultMapConfig = MapFileService.GetMapConfigFromCache(mapMetadata.Value.Key, mapMetadata.Value.FilePath, config, project);
 
             if (!resultMapConfig.Succesfully)
             {
-                return new Result<Schema>() { Value = null, Succesfully = false, Messages = new List<string>() { "Config map not opened successfully" } };
+                return new Result<Schema> { Value = null, Succesfully = false, Messages = new List<string> { "Config map not opened successfully" } };
             }
 
             var mapConfig = resultMapConfig.Value;
@@ -440,7 +461,7 @@ namespace BMapr.GDAL.WebApi.Services
 
             schema.Title = collectionId;
 
-            for (int layerIndex = 0; layerIndex < layerCount; layerIndex++)
+            for (var layerIndex = 0; layerIndex < layerCount; layerIndex++)
             {
                 var layer = dataSource.GetLayerByIndex(layerIndex);
 
@@ -453,31 +474,31 @@ namespace BMapr.GDAL.WebApi.Services
                 {
                     var layerDefinition = layer.GetLayerDefn();
 
-                    for (int fgi = 0; fgi < layerDefinition.GetGeomFieldCount(); fgi++)
+                    for (var fgi = 0; fgi < layerDefinition.GetGeomFieldCount(); fgi++)
                     {
                         var geometryFieldDef = layerDefinition.GetGeomFieldDefn(fgi);
                         var name = geometryFieldDef.GetName();
 
-                        schema.Properties.Add(name,new SchemaProperty()
+                        schema.Properties.Add(name, new SchemaProperty
                         {
                             Title = name,
                             Role = fgi == 0 ? "primary-geometry" : "secondary-geometry",
                             Format = GetGeometryFormat(geometryFieldDef),
-                            Ref = "https://geojson.org/schema/Geometry.json"
+                            Ref = "https://geojson.org/schema/Geometry.json",
                         });
                     }
 
-                    for (int fi = 0; fi < layerDefinition.GetFieldCount(); fi++)
+                    for (var fi = 0; fi < layerDefinition.GetFieldCount(); fi++)
                     {
                         var fieldDef = layer.GetLayerDefn().GetFieldDefn(fi);
                         var name = fieldDef.GetName();
                         var nameLc = name.ToLower();
                         var format = GetFieldFormat(fieldDef);
 
-                        schema.Properties.Add(name, new SchemaProperty()
+                        schema.Properties.Add(name, new SchemaProperty
                         {
                             Title = name,
-                            Role = (nameLc == "id" || nameLc == "fid" || nameLc == "gid") ? "id" : null,
+                            Role = nameLc == "id" || nameLc == "fid" || nameLc == "gid" ? "id" : null,
                             Format = format.Item1,
                             //Enum = format.Item2 not supported yet
                         });
@@ -487,7 +508,7 @@ namespace BMapr.GDAL.WebApi.Services
 
             schema.Id = $"{config.Host}/api/ogcapi/features/{project}/collections/{collectionId}/queryables?f=json";
 
-            return new Result<Schema>(){Value = schema};
+            return new Result<Schema> { Value = schema };
         }
 
         private static string GetGeometryFormat(GeomFieldDefn geometryFieldDef)
@@ -555,14 +576,14 @@ namespace BMapr.GDAL.WebApi.Services
             }
         }
 
-        private static Dictionary<string,object> GetFeatureProperties(Feature feature)
+        private static Dictionary<string, object> GetFeatureProperties(Feature feature)
         {
             Dictionary<string, object> properties = new();
 
             var featureDef = feature.GetDefnRef();
             var fieldCount = featureDef.GetFieldCount();
 
-            for (int i = 0; i < fieldCount; i++)
+            for (var i = 0; i < fieldCount; i++)
             {
                 var field = featureDef.GetFieldDefn(i);
                 var fieldType = field.GetFieldType();
@@ -573,13 +594,13 @@ namespace BMapr.GDAL.WebApi.Services
                         properties.Add(field.GetName(), feature.GetFieldAsInteger(i));
                         break;
                     case FieldType.OFTIntegerList:
-                        properties.Add(field.GetName(), feature.GetFieldAsIntegerList(i, out int count));
+                        properties.Add(field.GetName(), feature.GetFieldAsIntegerList(i, out var count));
                         break;
                     case FieldType.OFTReal:
                         properties.Add(field.GetName(), feature.GetFieldAsDouble(i));
                         break;
                     case FieldType.OFTRealList:
-                        properties.Add(field.GetName(), feature.GetFieldAsDoubleList(i, out int count2));
+                        properties.Add(field.GetName(), feature.GetFieldAsDoubleList(i, out var count2));
                         break;
                     case FieldType.OFTString:
                         properties.Add(field.GetName(), feature.GetFieldAsString(i));
@@ -617,11 +638,22 @@ namespace BMapr.GDAL.WebApi.Services
             return properties;
         }
 
-        private static Link? GetNavigationLink(bool next, Config config, string project, string collectionId, List<double> bbox, string? bboxCrs, string query, int offset, int limit, string f, int maxCount) 
+        private static Link? GetNavigationLink(
+            bool next,
+            Config config,
+            string project,
+            string collectionId,
+            List<double> bbox,
+            string? bboxCrs,
+            string query,
+            int offset,
+            int limit,
+            string f,
+            int maxCount)
         {
             var urlCollections = $"{config.Host}/api/ogcapi/features/{project}/collections/{collectionId}/items?";
 
-            bool flag=false;
+            var flag = false;
 
             if (!string.IsNullOrEmpty(f))
             {
@@ -631,7 +663,7 @@ namespace BMapr.GDAL.WebApi.Services
 
             if (bbox.Count > 0)
             {
-                urlCollections += $"{(flag?"&":"")}bbox={string.Join(',',bbox)}";
+                urlCollections += $"{(flag ? "&" : "")}bbox={string.Join(',', bbox)}";
                 flag = true;
             }
 
@@ -647,7 +679,7 @@ namespace BMapr.GDAL.WebApi.Services
                 flag = true;
             }
 
-            int offsetNew = 0;
+            var offsetNew = 0;
 
             if (next)
             {
@@ -666,13 +698,13 @@ namespace BMapr.GDAL.WebApi.Services
                 }
             }
 
-            urlCollections += $"{(flag ? "&" : "")}offset={(offsetNew)}";
-            urlCollections += $"&limit={(limit)}";
+            urlCollections += $"{(flag ? "&" : "")}offset={offsetNew}";
+            urlCollections += $"&limit={limit}";
 
-            return new Link()
+            return new Link
             {
-                Href = urlCollections, Rel = (next ? "next" : "prev"), Title = $"{(next ? "Next" : "Previous")} page",
-                Type = JsonMimeType
+                Href = urlCollections, Rel = next ? "next" : "prev", Title = $"{(next ? "Next" : "Previous")} page",
+                Type = JsonMimeType,
             };
         }
 

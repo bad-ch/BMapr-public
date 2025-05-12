@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using Newtonsoft.Json;
 using System.Text;
+using Newtonsoft.Json.Serialization;
 
 namespace BMapr.GDAL.WebApi.Controllers
 {
@@ -22,7 +23,8 @@ namespace BMapr.GDAL.WebApi.Controllers
         private readonly ILogger<OgcController> _logger;
         private static List<CrsDefinition> CrsList = new();
 
-        public OgcApiFeatuesController(ILogger<OgcController> logger, IConfiguration iConfig, IWebHostEnvironment environment, IMemoryCache cache) : base(iConfig, environment)
+        public OgcApiFeatuesController(ILogger<OgcController> logger, IConfiguration iConfig, IWebHostEnvironment environment, IMemoryCache cache)
+            : base(iConfig, environment)
         {
             _logger = logger;
             if (CrsList.Count == 0)
@@ -56,7 +58,7 @@ namespace BMapr.GDAL.WebApi.Controllers
 
             var projectPath = Path.Combine(Config.DataProjects.FullName, project);
 
-            if (!System.IO.Directory.Exists(projectPath))
+            if (!Directory.Exists(projectPath))
             {
                 return BadRequest("OGC API project not found");
             }
@@ -68,79 +70,84 @@ namespace BMapr.GDAL.WebApi.Controllers
             var contentMap = JsonConvert.SerializeObject(
                 result,
                 Formatting.None,
-                new JsonSerializerSettings()
+                new JsonSerializerSettings
                 {
-                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
                 }
             );
 
             var mapFile = JsonConvert.DeserializeObject<MapFile>(contentMap);
 
-            var landingPage = new LandingPage()
+            var landingPage = new LandingPage
             {
                 Title = mapFile?.Web?.Metadata?.OafTitle != null ? mapFile.Web?.Metadata?.OafTitle : "BMapr, OGC API features service",
-                Description = mapFile?.Web?.Metadata?.OafDescription != null ? mapFile.Web?.Metadata?.OafDescription : "BMapr, OGC API features service description with OGR/GDAL/Mapserver",
-                Links = new List<Link>(){
-                    new() {
+                Description = mapFile?.Web?.Metadata?.OafDescription != null
+                    ? mapFile.Web?.Metadata?.OafDescription
+                    : "BMapr, OGC API features service description with OGR/GDAL/Mapserver",
+                Links = new List<Link>
+                {
+                    new()
+                    {
                         Rel = "service",
                         Type = "application/json",
                         Title = "API definition for this enpoint as JSON",
-                        Href = $"{Config.Host}/api/ogcapi/features/{project}/?f=application/json"
+                        Href = $"{Config.Host}/api/ogcapi/features/{project}/?f=application/json",
                     },
                     new()
                     {
                         Rel = "service",
                         Type = "application/json",
                         Title = "API definition for this enpoint as JSON",
-                        Href = $"{Config.Host}/api/ogcapi/features/{project}"
-                    },
-                    new() {
-                        Rel = "service",
-                        Type = "application/json",
-                        Title = "API definition for this enpoint as JSON",
-                        Href = $"{Config.Host}/api/ogcapi/features/{project}/landingpage?f=application/json"
+                        Href = $"{Config.Host}/api/ogcapi/features/{project}",
                     },
                     new()
                     {
                         Rel = "service",
                         Type = "application/json",
                         Title = "API definition for this enpoint as JSON",
-                        Href = $"{Config.Host}/api/ogcapi/features/{project}/landingpage"
+                        Href = $"{Config.Host}/api/ogcapi/features/{project}/landingpage?f=application/json",
+                    },
+                    new()
+                    {
+                        Rel = "service",
+                        Type = "application/json",
+                        Title = "API definition for this enpoint as JSON",
+                        Href = $"{Config.Host}/api/ogcapi/features/{project}/landingpage",
                     },
                     new()
                     {
                         Rel = "conformance",
                         Type = "application/json",
                         Title = "Conformance Declaration as JSON",
-                        Href = $"{Config.Host}/api/ogcapi/features/{project}/conformance"
+                        Href = $"{Config.Host}/api/ogcapi/features/{project}/conformance",
                     },
                     new()
                     {
                         Rel = "conformance",
                         Type = "application/json",
                         Title = "Conformance Declaration as JSON",
-                        Href = $"{Config.Host}/api/ogcapi/features/{project}/conformance?f=application/json"
+                        Href = $"{Config.Host}/api/ogcapi/features/{project}/conformance?f=application/json",
                     },
                     new()
                     {
                         Rel = "data",
                         Type = "application/json",
                         Title = "Collections Metadata as JSON",
-                        Href = $"{Config.Host}/api/ogcapi/features/{project}/collections"
+                        Href = $"{Config.Host}/api/ogcapi/features/{project}/collections",
                     },
                     new()
                     {
                         Rel = "data",
                         Type = "application/json",
                         Title = "Collections Metadata as JSON",
-                        Href = $"{Config.Host}/api/ogcapi/features/{project}/collections?f=application/json"
+                        Href = $"{Config.Host}/api/ogcapi/features/{project}/collections?f=application/json",
                     },
                     new()
                     {
                         Rel = "self",
                         Type = "application/json",
                         Title = "This document",
-                        Href = $"{Config.Host}/api/ogcapi/features/{project}"
+                        Href = $"{Config.Host}/api/ogcapi/features/{project}",
                     },
                     //new()
                     //{
@@ -149,7 +156,7 @@ namespace BMapr.GDAL.WebApi.Controllers
                     //    Title = "This Document as XML",
                     //    Href = $"{Config.Host}/api/ogcapi/features/{project}?f=application/xml"
                     //},
-                }
+                },
             };
 
             var content = JsonConvert.SerializeObject(landingPage);
@@ -175,7 +182,7 @@ namespace BMapr.GDAL.WebApi.Controllers
 
             var projectPath = Path.Combine(Config.DataProjects.FullName, project);
 
-            if (!System.IO.Directory.Exists(projectPath))
+            if (!Directory.Exists(projectPath))
             {
                 return BadRequest("OGC API project not found");
             }
@@ -184,7 +191,7 @@ namespace BMapr.GDAL.WebApi.Controllers
 
             var conformance = new
             {
-                conformsTo = new List<string>()
+                conformsTo = new List<string>
                 {
                     "http://www.opengis.net/spec/ogcapi-common-1/1.0/conf/core",
                     "http://www.opengis.net/spec/ogcapi-common-1/1.0/conf/json",
@@ -195,7 +202,7 @@ namespace BMapr.GDAL.WebApi.Controllers
                     "http://www.opengis.net/spec/ogcapi-features-2/1.0/conf/crs",
                     "http://www.opengis.net/spec/ogcapi-features-3/1.0/conf/queryables",
                     "http://www.opengis.net/spec/ogcapi-features-5/1.0/conf/schemas",
-                }
+                },
             };
 
             var content = JsonConvert.SerializeObject(conformance);
@@ -221,7 +228,7 @@ namespace BMapr.GDAL.WebApi.Controllers
 
             var projectPath = Path.Combine(Config.DataProjects.FullName, project);
 
-            if (!System.IO.Directory.Exists(projectPath))
+            if (!Directory.Exists(projectPath))
             {
                 return BadRequest("OGC API project not found");
             }
@@ -231,12 +238,12 @@ namespace BMapr.GDAL.WebApi.Controllers
             var collections = new Collections();
             var urlCollections = $"{Config.Host}/api/ogcapi/features/{project}/collections";
 
-            collections.Links.Add(new Link()
+            collections.Links.Add(new Link
             {
                 Rel = "self",
                 Title = "This document",
                 Type = "application/json",
-                Href = $"{urlCollections}?f=application/json"
+                Href = $"{urlCollections}?f=application/json",
             });
 
             var result = OgcApiFeaturesService.GetCollections(Config, CrsList, project, collections, urlCollections);
@@ -263,7 +270,7 @@ namespace BMapr.GDAL.WebApi.Controllers
 
             var projectPath = Path.Combine(Config.DataProjects.FullName, project);
 
-            if (!System.IO.Directory.Exists(projectPath))
+            if (!Directory.Exists(projectPath))
             {
                 return BadRequest("OGC API project not found");
             }
@@ -294,16 +301,16 @@ namespace BMapr.GDAL.WebApi.Controllers
         [HttpHead("{project}/collections/{collectionId}/items")]
         [HttpOptions("{project}/collections/{collectionId}/items")]
         public ActionResult Feature(
-            string project, 
-            string collectionId, 
-            [FromQuery] string? bbox, 
-            [FromQuery(Name = "bbox-crs")] string? bboxCrs, 
-            [FromQuery] string? crs, 
-            [FromQuery] int? offset, 
+            string project,
+            string collectionId,
+            [FromQuery] string? bbox,
+            [FromQuery(Name = "bbox-crs")] string? bboxCrs,
+            [FromQuery] string? crs,
+            [FromQuery] int? offset,
             [FromQuery] int? limit,
             [FromQuery(Name = "filter-lang")] string? filterLang,
             [FromQuery] string? filter,
-            [FromQuery] string f = "geojson", 
+            [FromQuery] string f = "geojson",
             [FromQuery] bool file = false
         )
         {
@@ -358,7 +365,7 @@ namespace BMapr.GDAL.WebApi.Controllers
                     return BadRequest("OGC API bbox are no valid numbers");
                 }
 
-                if ((bboxDouble.Count < 4 || bboxDouble.Count > 6))
+                if (bboxDouble.Count < 4 || bboxDouble.Count > 6)
                 {
                     return BadRequest("OGC API bbox has to be an array of double values, 4-6 items");
                 }
@@ -385,8 +392,8 @@ namespace BMapr.GDAL.WebApi.Controllers
             }
 
             var queryParameter = Request.Query.ToDictionary(x => x.Key, y => y.Value.ToString());
-            var protectedParameters = new List<string>()
-                {"project", "collectionId", "bbox", "bbox-crs", "crs", "offset", "limit", "f", "file","filter-lang","filter"};
+            var protectedParameters = new List<string>
+                { "project", "collectionId", "bbox", "bbox-crs", "crs", "offset", "limit", "f", "file", "filter-lang", "filter" };
             var query = string.Empty;
             var index = 0;
 
@@ -411,11 +418,12 @@ namespace BMapr.GDAL.WebApi.Controllers
                 return BadRequest("OGC API to set filter and query don't make sense");
             }
 
-            _logger.LogInformation($"project {project}, collectionId {collectionId}, bbox: {string.Join(',',bboxDouble.Select(x => x.ToString()))}, query: {query}, offset {offset}, limit {limit}, f: {f}, filter-lang: {filterLang}, filter: {filter}");
+            _logger.LogInformation(
+                $"project {project}, collectionId {collectionId}, bbox: {string.Join(',', bboxDouble.Select(x => x.ToString()))}, query: {query}, offset {offset}, limit {limit}, f: {f}, filter-lang: {filterLang}, filter: {filter}");
 
             var url = Request.GetDisplayUrl();
 
-            var result = OgcApiFeaturesService.GetItems(Config, project, collectionId, bboxDouble, bboxCrs, crs, query, filter, offset,limit, f, url, Request.Host.Host);
+            var result = OgcApiFeaturesService.GetItems(Config, project, collectionId, bboxDouble, bboxCrs, crs, query, filter, offset, limit, f, url, Request.Host.Host);
 
             // todo add messages and exceptions from result to log
 
@@ -426,7 +434,7 @@ namespace BMapr.GDAL.WebApi.Controllers
 
             //todo reactivate
             //Response.Headers.Append("Content-Crs", featureCollection.Value.Crs);
-            
+
             return result.Value;
         }
 
@@ -457,9 +465,15 @@ namespace BMapr.GDAL.WebApi.Controllers
 
             var queryables = OgcApiFeaturesService.GetQueryables(Config, project, collectionId, f);
 
+            var contractResolver = new DefaultContractResolver
+            {
+                NamingStrategy = new CamelCaseNamingStrategy(),
+            };
+
             var content = JsonConvert.SerializeObject(queryables.Value, new JsonSerializerSettings
             {
-                NullValueHandling = NullValueHandling.Ignore
+                ContractResolver = contractResolver,
+                NullValueHandling = NullValueHandling.Ignore,
             });
 
             return new FileContentResult(Encoding.UTF8.GetBytes(content), "application/schema+json");
