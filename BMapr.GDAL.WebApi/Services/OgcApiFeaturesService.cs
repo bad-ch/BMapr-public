@@ -16,6 +16,7 @@ namespace BMapr.GDAL.WebApi.Services
     public static class OgcApiFeaturesService
     {
         public static readonly string JsonMimeType = "application/json";
+        public static readonly string SchemaJsonMimeType = "application/schema+json";
 
         public static Result<Collections> GetCollections(Config config, List<CrsDefinition> crsDefinitions, string project, Collections collections, string urlCollections)
         {
@@ -215,6 +216,11 @@ namespace BMapr.GDAL.WebApi.Services
                 result.AddMessage("Set BBox-CRS from request");
                 crsBboxOut = ProjectionService.getEPSGCode(bboxCrs);
             }
+
+            featureCollection.Links.Add(GetHomeLink(config,project));
+            featureCollection.Links.Add(GetCollectionsLink(config, project));
+            featureCollection.Links.Add(GetCollectionLink(config, project,collectionId));
+            featureCollection.Links.Add(GetQueryablesLink(config, project, collectionId));
 
             for (var layerIndex = 0; layerIndex < layerCount; layerIndex++)
             {
@@ -484,6 +490,7 @@ namespace BMapr.GDAL.WebApi.Services
                             Title = name,
                             Role = fgi == 0 ? "primary-geometry" : "secondary-geometry",
                             Format = GetGeometryFormat(geometryFieldDef),
+                            Type = GetGeometryFormat(geometryFieldDef), // todo there is a difference between format and type
                             Ref = "https://geojson.org/schema/Geometry.json",
                         });
                     }
@@ -500,6 +507,7 @@ namespace BMapr.GDAL.WebApi.Services
                             Title = name,
                             Role = nameLc == "id" || nameLc == "fid" || nameLc == "gid" ? "id" : null,
                             Format = format.Item1,
+                            Type = format.Item1, // todo there is a difference between format and type
                             //Enum = format.Item2 not supported yet
                         });
                     }
@@ -636,6 +644,72 @@ namespace BMapr.GDAL.WebApi.Services
             }
 
             return properties;
+        }
+
+        public static Link GetHomeLink(
+            Config config,
+            string project
+        )
+        {
+            var urlCollections = $"{config.Host}/api/ogcapi/features/{project}/?f=json";
+
+            return new Link
+            {
+                Href = urlCollections,
+                Rel = "home",
+                Title = "Landing page",
+                Type = JsonMimeType,
+            };
+        }
+
+        public static Link GetCollectionsLink(
+            Config config,
+            string project
+        )
+        {
+            var urlCollections = $"{config.Host}/api/ogcapi/features/{project}/collections?f=json";
+
+            return new Link
+            {
+                Href = urlCollections,
+                Rel = "data",
+                Title = "Get table of content",
+                Type = JsonMimeType,
+            };
+        }
+
+        public static Link GetCollectionLink(
+            Config config,
+            string project,
+            string collectionId
+        )
+        {
+            var urlCollections = $"{config.Host}/api/ogcapi/features/{project}/collections/{collectionId}?f=json";
+
+            return new Link
+            {
+                Href = urlCollections,
+                Rel = "collection",
+                Title = "Get meta data of this data",
+                Type = JsonMimeType,
+            };
+        }
+
+        public static Link GetQueryablesLink(
+            Config config,
+            string project,
+            string collectionId
+        )
+        {
+            var urlCollections = $"{config.Host}/api/ogcapi/features/{project}/collections/{collectionId}/queryables?f=json";
+
+            return new Link
+            {
+                Href = urlCollections,
+                Rel = "queryables",
+                Title = "Get schema data",
+                Type = SchemaJsonMimeType,
+            };
         }
 
         private static Link? GetNavigationLink(
