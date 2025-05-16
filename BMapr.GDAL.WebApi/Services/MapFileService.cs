@@ -42,6 +42,7 @@ namespace BMapr.GDAL.WebApi.Services
                     mapConfig.MapLayers[layer.name].IdSequenceStartValue = Convert.ToInt32(layer.metadata.get("msh_IdSequenceStartValue", "0"));
                     mapConfig.MapLayers[layer.name].Id = layer.metadata.get("msh_Id", "id");
                     mapConfig.MapLayers[layer.name].Connection = layer.metadata.get("msh_Connection", "");
+                    mapConfig.MapLayers[layer.name].LayerName = layer.metadata.get("msh_Layername", "");
                     mapConfig.MapLayers[layer.name].EPSG = string.IsNullOrEmpty(layer.getProjection().ToLower()) ? 0 : Convert.ToInt32(layer.getProjection().ToLower().Replace("init=epsg:",""));
                 }
 

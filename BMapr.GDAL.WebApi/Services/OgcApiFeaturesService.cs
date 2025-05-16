@@ -224,12 +224,14 @@ namespace BMapr.GDAL.WebApi.Services
 
             for (var layerIndex = 0; layerIndex < layerCount; layerIndex++)
             {
-                //if (layer.GetName() != collectionId)
-                //{
-                //    continue;
-                //}
-
                 var layer = dataSource.GetLayerByIndex(layerIndex);
+
+                if (!string.IsNullOrEmpty(layerConfig.LayerName) && layer.GetName() != layerConfig.LayerName)
+                {
+                    //ignore
+                    continue;
+                }
+                
                 var featureCount = layer.GetFeatureCount(1);
                 result.Messages.Add($"feature count {featureCount}");
 
