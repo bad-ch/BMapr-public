@@ -1,5 +1,4 @@
 ﻿using BMapr.GDAL.WebApi.Models;
-using Microsoft.Extensions.Caching.Memory;
 using OSGeo.MapServer;
 using System.Reflection;
 

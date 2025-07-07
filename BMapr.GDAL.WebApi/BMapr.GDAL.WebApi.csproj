@@ -29,6 +29,19 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Data\**" />
+    <Compile Remove="lib\**" />
+    <Content Remove="Data\**" />
+    <Content Remove="lib\**" />
+    <EmbeddedResource Remove="Data\**" />
+    <EmbeddedResource Remove="lib\**" />
+    <None Remove="Data\**" />
+    <None Remove="lib\**" />
+    <TypeScriptCompile Remove="Data\**" />
+    <TypeScriptCompile Remove="lib\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Remove="Services\schema\wmts\wmtsGetCapabilities.cs" />
   </ItemGroup>
 
@@ -61,14 +74,6 @@
     <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="9.0.0" />
     <PackageReference Include="System.Drawing.Common" Version="9.0.0" />
     <PackageReference Include="System.Reflection.Metadata" Version="9.0.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Data\jobs\" />
-    <Folder Include="Data\projects\10a50397-84e5-4c59-bc3d-85abc1c979d4\_cache\" />
-    <Folder Include="Data\tool\" />
-    <Folder Include="Data\share\" />
-    <Folder Include="Data\tracking\test\" />
   </ItemGroup>
 
   <ItemGroup>
