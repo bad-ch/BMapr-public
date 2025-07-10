@@ -2,6 +2,10 @@
 {
     public class GetItemRequest
     {
+        public string ConnectionString { get; set; }
+
+        public string Data { get; set; } // SQL query
+
         public string CollectionId { get; set; }
 
         public List<double> Bbox { get; set; }

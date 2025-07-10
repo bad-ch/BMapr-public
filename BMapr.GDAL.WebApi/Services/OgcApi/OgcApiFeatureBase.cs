@@ -11,12 +11,17 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
         public static readonly string GeoJsonMimeType = "application/geo+json";
         public static readonly string SchemaJsonMimeType = "application/schema+json";
         public static readonly string EpsgCrsPrefix = "http://www.opengis.net/def/crs/EPSG/0/";
+        public static readonly string CrsWgs84 = "http://www.opengis.net/def/crs/OGC/1.3/CRS84";
 
-        private string UrlCollections { get; set; }
-        private List<CrsDefinition> CrsDefinitions { get; set; }
+        protected string UrlCollections { get; set; }
+        protected List<CrsDefinition> CrsDefinitions { get; set; }
+        protected Config Config { get; set; }
+        protected string Project { get; set; }
 
-        protected OgcApiFeatureBase(string urlCollections, List<CrsDefinition> crsDefinitions)
+        protected OgcApiFeatureBase(Config config,string project, string urlCollections, List<CrsDefinition> crsDefinitions)
         {
+            Config = config;
+            Project = project;
             UrlCollections = urlCollections;
             CrsDefinitions = crsDefinitions;
         }
@@ -41,7 +46,7 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
         }
 
 
-        private Result<Collection> GetCollectionItem(CollectionItem item)
+        public Result<Collection> GetCollectionItem(CollectionItem item)
         {
             var collection = new Collection
             {
@@ -80,11 +85,183 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
             return new Result<Collection> { Value = collection, Succesfully = true };
         }
 
+        public int setCrs(FeatureCollection featureCollection, Result<FileContentResult> result, string crs, string bboxCrs)
+        {
+            int crsOut;
+
+            if (string.IsNullOrEmpty(crs))
+            {
+                if (!string.IsNullOrEmpty(bboxCrs))
+                {
+                    result.AddMessage("Takeover CRS from bbox");
+                    featureCollection.Crs = bboxCrs;
+                    crsOut = ProjectionService.getEPSGCode(bboxCrs);
+                }
+                else
+                {
+                    result.AddMessage("Set CRS as default to WGS84");
+                    featureCollection.Crs = CrsWgs84;
+                    crsOut = 4326;
+                }
+            }
+            else
+            {
+                result.AddMessage("Set CRS from request");
+                featureCollection.Crs = crs;
+                crsOut = ProjectionService.getEPSGCode(crs);
+            }
+
+            return crsOut;
+        }
+
+        public int setBboxCrs(Result<FileContentResult> result, int crsOut, string bboxCrs)
+        {
+            int crsBboxOut;
+
+            if (string.IsNullOrEmpty(bboxCrs))
+            {
+                result.AddMessage("Set BBox-CRS from CRS");
+                crsBboxOut = crsOut;
+            }
+            else
+            {
+                result.AddMessage("Set BBox-CRS from request");
+                crsBboxOut = ProjectionService.getEPSGCode(bboxCrs);
+            }
+
+            return crsBboxOut;
+        }
+
+        // *********************************************************************************************************************************
+        // Generate Links
+        // *********************************************************************************************************************************
+
+        public Link GetHomeLink()
+        {
+            var urlCollections = $"{Config.Host}/api/ogcapi/features/{Project}/?f=json";
+
+            return new Link
+            {
+                Href = urlCollections,
+                Rel = "home",
+                Title = "Landing page",
+                Type = JsonMimeType,
+            };
+        }
+
+        public Link GetCollectionsLink()
+        {
+            var urlCollections = $"{Config.Host}/api/ogcapi/features/{Project}/collections?f=json";
+
+            return new Link
+            {
+                Href = urlCollections,
+                Rel = "data",
+                Title = "Get table of content",
+                Type = JsonMimeType,
+            };
+        }
+
+        public Link GetCollectionLink(string collectionId)
+        {
+            var urlCollections = $"{Config.Host}/api/ogcapi/features/{Project}/collections/{collectionId}?f=json";
+
+            return new Link
+            {
+                Href = urlCollections,
+                Rel = "collection",
+                Title = "Get meta data of this data",
+                Type = JsonMimeType,
+            };
+        }
+
+        public Link GetQueryablesLink(string collectionId)
+        {
+            var urlCollections = $"{Config.Host}/api/ogcapi/features/{Project}/collections/{collectionId}/queryables?f=json";
+
+            return new Link
+            {
+                Href = urlCollections,
+                Rel = "queryables",
+                Title = "Get schema data",
+                Type = SchemaJsonMimeType,
+            };
+        }
+
+        private Link? GetNavigationLink(bool next, string collectionId, GetItemRequest request, int maxCount)
+        {
+            var urlCollections = $"{Config.Host}/api/ogcapi/features/{Project}/collections/{collectionId}/items?";
+
+            var flag = false;
+
+            if (!string.IsNullOrEmpty(request.Format))
+            {
+                urlCollections += $"f={request.Format}";
+                flag = true;
+            }
+
+            if (request.Bbox.Count > 0)
+            {
+                urlCollections += $"{(flag ? "&" : "")}bbox={string.Join(',', request.Bbox)}";
+                flag = true;
+            }
+
+            if (!string.IsNullOrEmpty(request.BboxCrs))
+            {
+                urlCollections += $"{(flag ? "&" : "")}bbox-crs={request.BboxCrs}";
+                flag = true;
+            }
+
+            if (!string.IsNullOrEmpty(request.Query))
+            {
+                urlCollections += $"{(flag ? "&" : "")}query={request.Query}";
+                flag = true;
+            }
+
+            var offsetNew = 0;
+
+            if (next)
+            {
+                offsetNew = (int)request.Offset! + (int)request.Limit!;
+                if (offsetNew > maxCount)
+                {
+                    return null;
+                }
+            }
+            else
+            {
+                offsetNew = (int)request.Offset! - (int)request.Limit!;
+                if (offsetNew < 0)
+                {
+                    return null;
+                }
+            }
+
+            urlCollections += $"{(flag ? "&" : "")}offset={offsetNew}";
+            urlCollections += $"&limit={request.Limit}";
+
+            return new Link
+            {
+                Href = urlCollections,
+                Rel = next ? "next" : "prev",
+                Title = $"{(next ? "Next" : "Previous")} page",
+                Type = JsonMimeType,
+            };
+        }
+
+        // *********************************************************************************************************************************
+        // Helpers
+        // *********************************************************************************************************************************
+
         private List<string> GetCrsList(List<string> crsList)
         {
             var crsListFormated = crsList.Select(x => x.Replace("epsg:", "")).Select(x => $"{EpsgCrsPrefix}{x}").ToList();
             return crsListFormated.Distinct().ToList();
         }
+
+        // *********************************************************************************************************************************
+        // Abstract definition
+        // *********************************************************************************************************************************
 
         public abstract Result<FileContentResult> GetItems(GetItemRequest request);
 
