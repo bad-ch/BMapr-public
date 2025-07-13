@@ -2,9 +2,7 @@
 {
     public class GetItemRequest
     {
-        public string ConnectionString { get; set; }
-
-        public string Data { get; set; } // SQL query
+        public Dictionary<string, object> ConnectionParameters = new();
 
         public string CollectionId { get; set; }
 
