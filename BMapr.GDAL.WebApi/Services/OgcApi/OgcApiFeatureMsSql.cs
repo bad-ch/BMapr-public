@@ -2,7 +2,9 @@
 using BMapr.GDAL.WebApi.Models.OgcApi.Features;
 using BMapr.GDAL.WebApi.Models.Spatial;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
 using System.Data.SqlClient;
+using System.Text;
 
 namespace BMapr.GDAL.WebApi.Services.OgcApi
 {
@@ -17,14 +19,15 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
 
         public readonly List<string> Parameters = new() { Connectionstring, DataTable, DataWhere, DataGeometryField, DataGeometrySrid, DataGeometryEpsgCode };
 
+        private CacheService cacheService { get; set; }
+
         public OgcApiFeatureMsSql(Config config, string project, string urlCollections, List<CrsDefinition> crsDefinitions) : base(config, project, urlCollections, crsDefinitions)
         {
         }
 
         public override Result<FileContentResult> GetItems(GetItemRequest request)
         {
-
-            var cacheService = new CacheService(Config.DataProject(Project).FullName, request.Host, "oaf", request.CollectionId);
+            cacheService = new CacheService(Config.DataProject(Project).FullName, request.Host, "oaf", request.CollectionId);
 
             var cachedContent = cacheService.GetContent(request.Url);
 
@@ -61,7 +64,33 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
                 {
                     connection.Open();
 
-                    var sql = $"SELECT * FROM {(string)request.ConnectionParameters[DataTable]} WHERE ${this.GetBBoxSpatialFilter(request, crsBboxOut)}"; // todo add query and DataWhere
+                    var sqlCount = $"SELECT Count(*) FROM {(string)request.ConnectionParameters[DataTable]} WHERE {GetWhere(request, crsBboxOut)}";
+                    int? featureMatched = null; 
+
+                    using (var command = new SqlCommand(sqlCount, connection))
+                    {
+                        var counter = command.ExecuteScalar();
+
+                        if (counter != null)
+                        {
+                            featureMatched = Convert.ToInt32(result);
+                        }
+                    }
+
+                    if (featureMatched == null)
+                    {
+                        result.AddMessage("Failed to count features in the database.", null, Result.LogLevel.Error);
+                        result.Value = null;
+                        return result;
+                    }
+
+                    if (featureMatched == 0)
+                    {
+                        result.AddMessage("No features found in the database for the given parameters.", null, Result.LogLevel.Info);
+                        return GetFinalResult(result, request, featureCollection);
+                    }
+
+                    var sql = $"SELECT * FROM {(string)request.ConnectionParameters[DataTable]} WHERE {GetWhere(request, crsBboxOut)}";
 
                     using (var command = new SqlCommand(sql, connection))
                     {
@@ -98,6 +127,45 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
 
         #region private
 
+        private Result<FileContentResult> GetFinalResult(Result<FileContentResult> result, GetItemRequest request, FeatureCollection featureCollection)
+        {
+            var content = JsonConvert.SerializeObject(featureCollection);
+            var byteContent = Encoding.UTF8.GetBytes(content);
+            var contentType = "application/geo+json";
+
+            cacheService.WriteContent(request.Url, byteContent, contentType);
+
+            result.Value = new FileContentResult(byteContent, contentType);
+            result.Succesfully = true;
+            return result;
+        }
+
+        private string GetWhere(GetItemRequest request, int crsBboxOut)
+        {
+            var dataWhere = request.ConnectionParameters[DataWhere] as string;
+            var bboxWhere = GetBBoxSpatialFilter(request, crsBboxOut);
+            var queryWhere = request.Query;
+
+            var conditions = new List<string>();
+
+            if (!string.IsNullOrEmpty(dataWhere))
+            {
+                conditions.Add(dataWhere);
+            }
+
+            if (!string.IsNullOrEmpty(bboxWhere))
+            {
+                conditions.Add(bboxWhere);
+            }
+
+            if (!string.IsNullOrEmpty(queryWhere))
+            {
+                conditions.Add(queryWhere);
+            }
+
+            return string.Join(" AND ", conditions);
+        }
+
         private string GetBBoxSpatialFilter(GetItemRequest request, int crsBboxOut)
         {
             string name = (string)request.ConnectionParameters[DataGeometryField];
@@ -112,6 +180,26 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
             {
                 wktBbox = $"POLYGON(({request.Bbox[0]} {request.Bbox[1]}, {request.Bbox[2]} {request.Bbox[1]},{request.Bbox[2]} {request.Bbox[3]}, {request.Bbox[0]} {request.Bbox[3]}, {request.Bbox[0]} {request.Bbox[1]}))";
             }
+
+            // todo
+
+            //if (crsBboxOut != crsSrc)
+            //{
+            //    var outBboxCrs = new OSGeo.OSR.SpatialReference("");
+            //    outBboxCrs.ImportFromEPSG(crsBboxOut);
+            //    var t1 = outCrs.GetAxisOrientation(null, 0);
+            //    var t2 = outCrs.GetAxisOrientation(null, 1);
+
+
+            //    var srcCrs = new OSGeo.OSR.SpatialReference("");
+            //    srcCrs.ImportFromEPSG(crsSrc);
+            //    var t3 = srcCrs.GetAxisOrientation(null, 0);
+            //    var t4 = srcCrs.GetAxisOrientation(null, 1);
+
+            //    var coordTransBbox = new OSGeo.OSR.CoordinateTransformation(outBboxCrs, srcCrs);
+
+            //    geometryBbox.Transform(coordTransBbox);
+            //}
 
             return
                 $"{name}.STIntersects(geometry::STGeomFromText('${wktBbox}', {srid})) = 1";
