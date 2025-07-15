@@ -1,12 +1,11 @@
-﻿using System.Data;
-using Azure.Core;
-using BMapr.GDAL.WebApi.Models;
+﻿using BMapr.GDAL.WebApi.Models;
 using BMapr.GDAL.WebApi.Models.Db;
 using BMapr.GDAL.WebApi.Models.OgcApi.Features;
 using BMapr.GDAL.WebApi.Models.Spatial;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Newtonsoft.Json;
+using System.Data;
 using System.Text;
 
 namespace BMapr.GDAL.WebApi.Services.OgcApi
@@ -15,13 +14,14 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
     {
         public static readonly string Connectionstring = "Connectionstring";
         public static readonly string DataTable = "DataTable";
-        public static readonly string DataWhere = "DataWhere";                         // where clause, base filter, will be extended with bbox and query
+        public static readonly string DataWhere = "DataWhere";                        // where clause, base filter, will be extended with bbox and query
         public static readonly string DataIdField = "DataIdField";
         public static readonly string DataGeometryField = "DataGeometryField";
+        public static readonly string DataUseGeography = "DataUseGeography";          // boolean use geography data type
         public static readonly string DataGeometrySrid = "DataGeometrySrid";          // Srid of the geometry field in the database, could be 0 as well
         public static readonly string DataGeometryEpsgCode = "DataGeometryEpsgCode";  // EPSG code of the geometry field
 
-        public readonly List<string> Parameters = new() { Connectionstring, DataTable, DataWhere, DataIdField, DataGeometryField, DataGeometrySrid, DataGeometryEpsgCode };
+        public readonly List<string> Parameters = new() { Connectionstring, DataTable, DataWhere, DataIdField, DataGeometryField, DataUseGeography, DataGeometrySrid, DataGeometryEpsgCode };
 
         private CacheService cacheService { get; set; }
 
@@ -119,6 +119,8 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
                         }
                     }
 
+                    var fields = GetFields(connection, request);
+
                     var sql = $"SELECT * FROM {(string)request.ConnectionParameters[DataTable]} WHERE {GetWhere(request, crsBboxOut)} ORDER BY {(string)request.ConnectionParameters[DataIdField]} OFFSET {request.Offset} ROWS FETCH NEXT {request.Limit} ROWS ONLY;";
 
                     result.Messages.Add($"sql queried: {sql}");
@@ -127,17 +129,84 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
                     {
                         using (var reader = command.ExecuteReader())
                         {
-                            if (reader.HasRows)
+                            int j = 0;
+
+                            while (reader.Read())
                             {
-                                while (reader.Read())
+                                var feature = new Feature { Type = "Feature" };
+
+                                fields.ForEach(field =>
                                 {
-                                    Console.WriteLine(reader[0]);
+                                    var fieldType = field.Type.ToString();
+
+                                    switch (fieldType)
+                                    {
+                                        case "System.String":
+                                        case "System.Char":
+                                            feature.Properties.Add(field.Name, reader.GetString(field.Name));
+                                            break;
+                                        case "System.Guid":
+                                            feature.Properties.Add(field.Name, reader.GetGuid(field.Name));
+                                            break;
+                                        case "System.Boolean":
+                                            feature.Properties.Add(field.Name, reader.GetBoolean(field.Name));
+                                            break;
+                                        case "System.Byte":
+                                        case "System.SByte":
+                                            feature.Properties.Add(field.Name, reader.GetByte(field.Name));
+                                            break;
+                                        case "System.Decimal":
+                                            feature.Properties.Add(field.Name, reader.GetDecimal(field.Name));
+                                            break;
+                                        case "System.Double":
+                                        case "System.Single":
+                                            feature.Properties.Add(field.Name, reader.GetDouble(field.Name));
+                                            break;
+                                        case "System.Int32":
+                                        case "System.UInt32":
+                                        case "System.IntPtr":
+                                        case "System.UIntPtr":
+                                        case "System.Int64":
+                                        case "System.UInt64":
+                                        case "System.Int16":
+                                        case "System.UInt16":
+                                            feature.Properties.Add(field.Name, reader.GetInt64(field.Name));
+                                            break;
+                                        case "System.DateTime":
+                                            feature.Properties.Add(field.Name, reader.GetDateTime(field.Name));
+                                            break;
+                                        //case "System.DateTimeOffset":
+                                        //    feature.Properties.Add(field.Name, reader.GetDateTimeOffset(field.Name));
+                                        //    break;
+                                        default:
+                                            throw new Exception($"Type not found {field.Name}");
+                                    }
+                                });
+
+                                var geometryFieldName = (string) request.ConnectionParameters[DataGeometryField];
+                                var fieldGeometry = fields.FirstOrDefault(x => x.Name == geometryFieldName);
+
+                                // todo handle string,guid ids as well
+                                var idFieldName = (string)request.ConnectionParameters[DataIdField];
+                                feature.Id = reader.GetInt64(idFieldName).ToString();
+
+                                if (fieldGeometry != null)
+                                {
+                                    var wkt = reader.GetString(geometryFieldName);
+                                    var geometry = GeometryService.GetOgrGeometryFromWkt(wkt);
+                                    var geometryGeoJson = GeometryService.GetStringFromOgrGeometry(geometry.Value, "geojson", false);
+
+                                    if (!string.IsNullOrEmpty(geometryGeoJson))
+                                    {
+                                        feature.Geometry = JsonConvert.DeserializeObject<dynamic>(geometryGeoJson)!;
+                                    }
                                 }
+
+                                featureCollection.Features.Add(feature);
+                                j++;
                             }
-                            else
-                            {
-                                Console.WriteLine("No rows found.");
-                            }
+
+                            featureCollection.NumberReturned = j;
                         }
                     }
                 }
@@ -147,8 +216,15 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
                 }
             }
 
-            // todo
-            return null;
+            var content = JsonConvert.SerializeObject(featureCollection);
+            var byteContent = Encoding.UTF8.GetBytes(content);
+            var contentType = "application/geo+json";
+
+            cacheService.WriteContent(request.Url, byteContent, contentType);
+
+            result.Value = new FileContentResult(byteContent, contentType);
+            result.Succesfully = true;
+            return result;
         }
 
         public override Result<Schema> GetQueryables(GetQueryablesRequest request)
@@ -286,6 +362,100 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
             }
 
             return fields;
+        }
+
+        private DbFieldValue GetFieldValue(DbField dbField, string value)
+        {
+            return new DbFieldValue()
+            {
+                IsAutoIncrement = dbField.IsAutoIncrement,
+                Name = dbField.Name,
+                Type = dbField.Type,
+                ProviderType = dbField.ProviderType,
+                TypeName = dbField.TypeName,
+                MaxLength = dbField.MaxLength,
+                IsNullable = dbField.IsNullable,
+                Value = value
+            };
+        }
+
+        /// <summary>
+        /// Convert from feature to db fields list, needed for transaction
+        /// </summary>
+        /// <param name="request"></param>
+        /// <param name="featureBody"></param>
+        /// <param name="fields"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        
+        private List<DbFieldValue> GetValues(GetItemRequest request, FeatureBody featureBody, List<DbField> fields)
+        {
+            var properties = new List<DbFieldValue>();
+
+            foreach (var column in featureBody.Properties)
+            {
+                foreach (var field in fields)
+                {
+                    if (column.Key != field.Name)
+                    {
+                        continue;
+                    }
+
+                    var fieldType = field.Type.ToString();
+
+                    switch (fieldType)
+                    {
+                        case "System.String":
+                        case "System.Char":
+                        case "System.Guid":
+                            properties.Add(GetFieldValue(field, column.Value == null ? "NULL" : $"'{column.Value}'"));
+                            break;
+                        case "System.Boolean":
+                        case "System.Byte":
+                        case "System.SByte":
+                        case "System.Decimal":
+                        case "System.Double":
+                        case "System.Single":
+                        case "System.Int32":
+                        case "System.UInt32":
+                        case "System.IntPtr":
+                        case "System.UIntPtr":
+                        case "System.Int64":
+                        case "System.UInt64":
+                        case "System.Int16":
+                        case "System.UInt16":
+                            properties.Add(GetFieldValue(field, column.Value == null ? "NULL" : $"{column.Value}"));
+                            break;
+                        case "System.DateTime":
+                            properties.Add(GetFieldValue(field, column.Value == null ? "NULL" : $"'{column.Value}'")); // todo check
+                            break;
+                        case "System.DateTimeOffset":
+                            properties.Add(GetFieldValue(field, column.Value == null ? "NULL" : $"CAST('{column.Value}' AS DATETIMEOFFSET)"));
+                            break;
+                        default:
+                            throw new Exception($"Type not found {field.Name}");
+                    }
+                }
+            }
+
+            var useGeographyType = (bool) request.ConnectionParameters[DataUseGeography];
+
+            if (!string.IsNullOrEmpty(featureBody.Geometry) && fields.Any(x => x.ProviderType == 29) && !useGeographyType)
+            {
+                var field = fields.First(x => x.ProviderType == 29); //what is if we have more than one geometry field
+                properties.Add(GetFieldValue(field, $"geometry::STGeomFromText('{featureBody.Geometry}', {featureBody.Epsg})"));
+            }
+
+            // for geography the provider type is 29 as well, that's quite ugly
+            if (!string.IsNullOrEmpty(featureBody.Geometry) && fields.Any(x => x.ProviderType == 29) && useGeographyType)
+            {
+                var invertedGeometry = GeometryService.InvertWktGeometry(featureBody.Geometry);
+
+                var field = fields.First(x => x.ProviderType == 29); //what is if we have more than one geometry field
+                properties.Add(GetFieldValue(field, $"geography::STGeomFromText('{invertedGeometry.Value}', {featureBody.Epsg})"));
+            }
+
+            return properties;
         }
 
         #endregion
