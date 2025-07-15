@@ -1,9 +1,12 @@
-﻿using BMapr.GDAL.WebApi.Models;
+﻿using System.Data;
+using Azure.Core;
+using BMapr.GDAL.WebApi.Models;
+using BMapr.GDAL.WebApi.Models.Db;
 using BMapr.GDAL.WebApi.Models.OgcApi.Features;
 using BMapr.GDAL.WebApi.Models.Spatial;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Newtonsoft.Json;
-using System.Data.SqlClient;
 using System.Text;
 
 namespace BMapr.GDAL.WebApi.Services.OgcApi
@@ -13,11 +16,12 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
         public static readonly string Connectionstring = "Connectionstring";
         public static readonly string DataTable = "DataTable";
         public static readonly string DataWhere = "DataWhere";                         // where clause, base filter, will be extended with bbox and query
+        public static readonly string DataIdField = "DataIdField";
         public static readonly string DataGeometryField = "DataGeometryField";
         public static readonly string DataGeometrySrid = "DataGeometrySrid";          // Srid of the geometry field in the database, could be 0 as well
         public static readonly string DataGeometryEpsgCode = "DataGeometryEpsgCode";  // EPSG code of the geometry field
 
-        public readonly List<string> Parameters = new() { Connectionstring, DataTable, DataWhere, DataGeometryField, DataGeometrySrid, DataGeometryEpsgCode };
+        public readonly List<string> Parameters = new() { Connectionstring, DataTable, DataWhere, DataIdField, DataGeometryField, DataGeometrySrid, DataGeometryEpsgCode };
 
         private CacheService cacheService { get; set; }
 
@@ -90,7 +94,34 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
                         return GetFinalResult(result, request, featureCollection);
                     }
 
-                    var sql = $"SELECT * FROM {(string)request.ConnectionParameters[DataTable]} WHERE {GetWhere(request, crsBboxOut)}";
+                    featureCollection.NumberMatched = (int)featureMatched;
+                    result.Messages.Add($"feature count with filter {featureCollection.NumberMatched}");
+
+                    if (request.Offset == null && request.Limit != null && request.Limit < featureCollection.NumberMatched)
+                    {
+                        result.Messages.Add($"force offset - because not set - to 0");
+                        request.Offset = 0;
+                    }
+
+                    if (request.Offset != null && request.Limit != null)
+                    {
+                        var next = GetNavigationLink(true, request, (int)featureCollection.NumberMatched);
+                        var prev = GetNavigationLink(false, request, (int)featureCollection.NumberMatched);
+
+                        if (next != null)
+                        {
+                            featureCollection.Links.Add(next);
+                        }
+
+                        if (prev != null)
+                        {
+                            featureCollection.Links.Add(prev);
+                        }
+                    }
+
+                    var sql = $"SELECT * FROM {(string)request.ConnectionParameters[DataTable]} WHERE {GetWhere(request, crsBboxOut)} ORDER BY {(string)request.ConnectionParameters[DataIdField]} OFFSET {request.Offset} ROWS FETCH NEXT {request.Limit} ROWS ONLY;";
+
+                    result.Messages.Add($"sql queried: {sql}");
 
                     using (var command = new SqlCommand(sql, connection))
                     {
@@ -224,6 +255,37 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
             // todo check specific content of parameters
 
             return result;
+        }
+
+        private List<DbField> GetFields(SqlConnection connection, GetItemRequest request)
+        {
+            var fields = new List<DbField>();
+
+            using (SqlCommand command = new SqlCommand($"SELECT * FROM {(string)request.ConnectionParameters[DataTable]}", connection))
+            {
+                using (var reader = command.ExecuteReader(CommandBehavior.SchemaOnly))
+                {
+                    DataTable? schemaTable = reader.GetSchemaTable();
+
+                    foreach (DataRow colRow in schemaTable?.Rows)
+                    {
+                        var field = new DbField()
+                        {
+                            IsAutoIncrement = colRow.Field<bool>("IsAutoIncrement"),
+                            Name = colRow.Field<String>("ColumnName") ?? "",
+                            Type = colRow.Field<System.Type>("DataType"),
+                            TypeName = (colRow.Field<System.Type>("DataType"))?.ToString(),
+                            ProviderType = colRow.Field<Int32>("ProviderType"),
+                            MaxLength = colRow.Field<Int32>("ColumnSize"),
+                            IsNullable = colRow.Field<bool>("AllowDBNull"),
+                        };
+
+                        fields.Add(field);
+                    }
+                }
+            }
+
+            return fields;
         }
 
         #endregion

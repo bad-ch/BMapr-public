@@ -188,9 +188,9 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
             };
         }
 
-        private Link? GetNavigationLink(bool next, string collectionId, GetItemRequest request, int maxCount)
+        protected Link? GetNavigationLink(bool next, GetItemRequest request, int maxCount)
         {
-            var urlCollections = $"{Config.Host}/api/ogcapi/features/{Project}/collections/{collectionId}/items?";
+            var urlCollections = $"{Config.Host}/api/ogcapi/features/{Project}/collections/{request.CollectionId}/items?";
 
             var flag = false;
 
