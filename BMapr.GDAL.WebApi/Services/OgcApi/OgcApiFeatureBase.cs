@@ -1,4 +1,5 @@
-﻿using BMapr.GDAL.WebApi.Models;
+﻿using Azure.Core;
+using BMapr.GDAL.WebApi.Models;
 using BMapr.GDAL.WebApi.Models.OgcApi.Features;
 using BMapr.GDAL.WebApi.Models.Spatial;
 using Microsoft.AspNetCore.Mvc;
@@ -13,16 +14,14 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
         public static readonly string EpsgCrsPrefix = "http://www.opengis.net/def/crs/EPSG/0/";
         public static readonly string CrsWgs84 = "http://www.opengis.net/def/crs/OGC/1.3/CRS84";
 
-        protected string UrlCollections { get; set; }
         protected List<CrsDefinition> CrsDefinitions { get; set; }
         protected Config Config { get; set; }
         protected string Project { get; set; }
 
-        protected OgcApiFeatureBase(Config config,string project, string urlCollections, List<CrsDefinition> crsDefinitions)
+        protected OgcApiFeatureBase(Config config,string project, List<CrsDefinition> crsDefinitions)
         {
             Config = config;
             Project = project;
-            UrlCollections = urlCollections;
             CrsDefinitions = crsDefinitions;
         }
 
@@ -77,10 +76,10 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
 
             collection.Extent.Spatial.Bbox.Add(new List<double> { item.MinX, item.MinY, item.MaxX, item.MaxY });
 
-            collection.Links.Add(new Link { Rel = "self", Title = "This collection", Type = JsonMimeType, Href = $"{UrlCollections}/{item.Name}" });
-            collection.Links.Add(new Link { Rel = "items", Title = $"{item.Name} as GeoJSON", Type = GeoJsonMimeType, Href = $"{UrlCollections}/{item.Name}/items?f=geojson" });
-            collection.Links.Add(new Link { Rel = "queryables", Title = $"Get available attributes", Type = SchemaJsonMimeType, Href = $"{UrlCollections}/{item.Name}/queryables?f=json" });
-            // collection.Links.Add(new Link() { Rel = "describedby", Title = $"Schema for {item.Name}", Type = JsonMimeType, Href = $"{UrlCollections}/{item.Name}/schema?f=application/json" });
+            collection.Links.Add(new Link { Rel = "self", Title = "This collection", Type = JsonMimeType, Href = $"{Config.Host}/api/ogcapi/features/{Project}/collections/{item.Name}/items" });
+            collection.Links.Add(new Link { Rel = "items", Title = $"{item.Name} as GeoJSON", Type = GeoJsonMimeType, Href = $"{Config.Host}/api/ogcapi/features/{Project}/collections/{item.Name}?f=geojson" });
+            collection.Links.Add(new Link { Rel = "queryables", Title = $"Get available attributes", Type = SchemaJsonMimeType, Href = $"{Config.Host}/api/ogcapi/features/{Project}/collections/{item.Name}/queryables?f=json" });
+            // collection.Links.Add(new Link() { Rel = "describedby", Title = $"Schema for {item.Name}", Type = JsonMimeType, Href = $"{Config.Host}/api/ogcapi/features/{Project}/collections/{item.Name}/schema?f=application/json" });
 
             return new Result<Collection> { Value = collection, Succesfully = true };
         }

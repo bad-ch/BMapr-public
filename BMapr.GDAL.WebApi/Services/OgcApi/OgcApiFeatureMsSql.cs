@@ -2,8 +2,10 @@
 using BMapr.GDAL.WebApi.Models.Db;
 using BMapr.GDAL.WebApi.Models.OgcApi.Features;
 using BMapr.GDAL.WebApi.Models.Spatial;
+using BMapr.GDAL.WebApi.Models.Spatial.Vector;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
+using Microsoft.SqlServer.Types;
 using Newtonsoft.Json;
 using System.Data;
 using System.Text;
@@ -25,7 +27,7 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
 
         private CacheService cacheService { get; set; }
 
-        public OgcApiFeatureMsSql(Config config, string project, string urlCollections, List<CrsDefinition> crsDefinitions) : base(config, project, urlCollections, crsDefinitions)
+        public OgcApiFeatureMsSql(Config config, string project, List<CrsDefinition> crsDefinitions) : base(config, project, crsDefinitions)
         {
         }
 
@@ -33,14 +35,16 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
         {
             cacheService = new CacheService(Config.DataProject(Project).FullName, request.Host, "oaf", request.CollectionId);
 
-            var cachedContent = cacheService.GetContent(request.Url);
+            // todo reactivate
 
-            if (cachedContent != null)
-            {
-                return new Result<FileContentResult> {Value = cachedContent};
-            }
+            //var cachedContent = cacheService.GetContent(request.Url);
 
-            var featureCollection = new FeatureCollection { Type = "FeatureCollection" };
+            //if (cachedContent != null)
+            //{
+            //    return new Result<FileContentResult> {Value = cachedContent};
+            //}
+
+            var featureCollection = new Models.OgcApi.Features.FeatureCollection { Type = "FeatureCollection" };
             var result = new Result<FileContentResult>();
             var crsOut = 0;
             var crsBboxOut = 0;
@@ -53,6 +57,8 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
                 result.Value = null;
                 return result;
             }
+
+            featureCollection.Name = request.CollectionId;
 
             crsOut = setCrs(featureCollection, result, request.Crs, request.BboxCrs);
             crsBboxOut = setBboxCrs(result, crsOut, request.BboxCrs);
@@ -77,7 +83,7 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
 
                         if (counter != null)
                         {
-                            featureMatched = Convert.ToInt32(result);
+                            featureMatched = Convert.ToInt32(counter);
                         }
                     }
 
@@ -133,10 +139,15 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
 
                             while (reader.Read())
                             {
-                                var feature = new Feature { Type = "Feature" };
+                                var feature = new Models.OgcApi.Features.Feature { Type = "Feature" };
 
                                 fields.ForEach(field =>
                                 {
+                                    if (field.Type == null)
+                                    {
+                                        return;
+                                    }
+
                                     var fieldType = field.Type.ToString();
 
                                     switch (fieldType)
@@ -164,12 +175,14 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
                                             break;
                                         case "System.Int32":
                                         case "System.UInt32":
-                                        case "System.IntPtr":
-                                        case "System.UIntPtr":
+                                            feature.Properties.Add(field.Name, reader.GetInt32(field.Name));
+                                            break;
+                                        //case "System.IntPtr":
+                                        //case "System.UIntPtr":
                                         case "System.Int64":
                                         case "System.UInt64":
-                                        case "System.Int16":
-                                        case "System.UInt16":
+                                        //case "System.Int16":
+                                        //case "System.UInt16":
                                             feature.Properties.Add(field.Name, reader.GetInt64(field.Name));
                                             break;
                                         case "System.DateTime":
@@ -179,6 +192,7 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
                                         //    feature.Properties.Add(field.Name, reader.GetDateTimeOffset(field.Name));
                                         //    break;
                                         default:
+                                            break;
                                             throw new Exception($"Type not found {field.Name}");
                                     }
                                 });
@@ -188,18 +202,38 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
 
                                 // todo handle string,guid ids as well
                                 var idFieldName = (string)request.ConnectionParameters[DataIdField];
-                                feature.Id = reader.GetInt64(idFieldName).ToString();
+                                feature.Id = reader.GetInt32(idFieldName).ToString();
 
                                 if (fieldGeometry != null)
                                 {
-                                    var wkt = reader.GetString(geometryFieldName);
-                                    var geometry = GeometryService.GetOgrGeometryFromWkt(wkt);
-                                    var geometryGeoJson = GeometryService.GetStringFromOgrGeometry(geometry.Value, "geojson", false);
+                                    var sqlBytes = reader.GetSqlBytes(fields.First(x => x.Name == geometryFieldName).Index);
 
-                                    if (!string.IsNullOrEmpty(geometryGeoJson))
+                                    if (sqlBytes != null)
                                     {
-                                        feature.Geometry = JsonConvert.DeserializeObject<dynamic>(geometryGeoJson)!;
+                                        //string hexWKB = BitConverter.ToString(sqlBytes.Value).Replace("-", "");
+                                        //SqlGeometry geometrySql = SqlGeometry.STGeomFromWKB(sqlBytes, (int)request.ConnectionParameters[DataGeometrySrid]);
+                                        //var wkt = geometrySql.STAsText().Value.ToString();
+
+                                        //byte[] geometryWKB = reader[geometryFieldName] as byte[];
+                                        //var geometryWKB = reader.GetBytes(geometryFieldName,);
+                                        //var wkbReader = new NetTopologySuite.IO.WKBReader();
+                                        //var geometryNT = wkbReader.Read(sqlBytes.Value);
+                                        //string wkt = geometryNT.ToText(); // Convert to WKT
+
+                                        object geometryData = reader[fields.First(x => x.Name == geometryFieldName).Index].ToString();
+                                        var wkt = geometryData.ToString();
+
+                                        //string wkt = reader.GetString(fields.First(x => x.Name == geometryFieldName).Index);
+
+                                        var geometry = GeometryService.GetOgrGeometryFromWkt(wkt);
+                                        var geometryGeoJson = GeometryService.GetStringFromOgrGeometry(geometry.Value, "geojson", false);
+
+                                        if (!string.IsNullOrEmpty(geometryGeoJson))
+                                        {
+                                            feature.Geometry = JsonConvert.DeserializeObject<dynamic>(geometryGeoJson)!;
+                                        }
                                     }
+
                                 }
 
                                 featureCollection.Features.Add(feature);
@@ -220,7 +254,9 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
             var byteContent = Encoding.UTF8.GetBytes(content);
             var contentType = "application/geo+json";
 
-            cacheService.WriteContent(request.Url, byteContent, contentType);
+            // todo reactivate
+
+            // cacheService.WriteContent(request.Url, byteContent, contentType);
 
             result.Value = new FileContentResult(byteContent, contentType);
             result.Succesfully = true;
@@ -234,13 +270,15 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
 
         #region private
 
-        private Result<FileContentResult> GetFinalResult(Result<FileContentResult> result, GetItemRequest request, FeatureCollection featureCollection)
+        private Result<FileContentResult> GetFinalResult(Result<FileContentResult> result, GetItemRequest request, Models.OgcApi.Features.FeatureCollection featureCollection)
         {
             var content = JsonConvert.SerializeObject(featureCollection);
             var byteContent = Encoding.UTF8.GetBytes(content);
             var contentType = "application/geo+json";
 
-            cacheService.WriteContent(request.Url, byteContent, contentType);
+            // todo reactivate
+
+            // cacheService.WriteContent(request.Url, byteContent, contentType);
 
             result.Value = new FileContentResult(byteContent, contentType);
             result.Succesfully = true;
@@ -309,7 +347,7 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
             //}
 
             return
-                $"{name}.STIntersects(geometry::STGeomFromText('${wktBbox}', {srid})) = 1";
+                $"{name}.STIntersects(geometry::STGeomFromText('{wktBbox}', {srid})) = 1";
         }
 
         private Result<bool> CheckParameters(GetItemRequest request)
@@ -343,6 +381,8 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
                 {
                     DataTable? schemaTable = reader.GetSchemaTable();
 
+                    var index = 0;
+
                     foreach (DataRow colRow in schemaTable?.Rows)
                     {
                         var field = new DbField()
@@ -354,8 +394,10 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
                             ProviderType = colRow.Field<Int32>("ProviderType"),
                             MaxLength = colRow.Field<Int32>("ColumnSize"),
                             IsNullable = colRow.Field<bool>("AllowDBNull"),
+                            Index = index
                         };
 
+                        index++;
                         fields.Add(field);
                     }
                 }
