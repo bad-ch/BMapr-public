@@ -2,10 +2,8 @@
 using BMapr.GDAL.WebApi.Models.Db;
 using BMapr.GDAL.WebApi.Models.OgcApi.Features;
 using BMapr.GDAL.WebApi.Models.Spatial;
-using BMapr.GDAL.WebApi.Models.Spatial.Vector;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
-using Microsoft.SqlServer.Types;
 using Newtonsoft.Json;
 using System.Data;
 using System.Text;
