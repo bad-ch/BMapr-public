@@ -5,9 +5,9 @@ using BMapr.GDAL.WebApi.Models.Spatial;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Newtonsoft.Json;
+using OSGeo.OGR;
 using System.Data;
 using System.Text;
-using Microsoft.AspNetCore.Connections;
 
 namespace BMapr.GDAL.WebApi.Services.OgcApi
 {
@@ -45,8 +45,9 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
 
             var featureCollection = new Models.OgcApi.Features.FeatureCollection { Type = "FeatureCollection" };
             var result = new Result<FileContentResult>();
-            var crsOut = 0;
-            var crsBboxOut = 0;
+            int crsOut;
+            int crsBboxOut;
+            int crsSrc;
 
             var checkParametersResult = CheckParameters(request);
 
@@ -61,6 +62,7 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
 
             crsOut = setCrs(featureCollection, result, request.Crs, request.BboxCrs);
             crsBboxOut = setBboxCrs(result, crsOut, request.BboxCrs);
+            crsSrc = (int) request.ConnectionParameters[DataGeometryEpsgCode];
 
             featureCollection.Links.Add(GetHomeLink());
             featureCollection.Links.Add(GetCollectionsLink());
@@ -73,7 +75,7 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
                 {
                     connection.Open();
 
-                    var sqlCount = $"SELECT Count(*) FROM {(string)request.ConnectionParameters[DataTable]} WHERE {GetWhere(request, crsBboxOut)}";
+                    var sqlCount = $"SELECT Count(*) FROM {(string)request.ConnectionParameters[DataTable]} WHERE {GetWhere(request, crsBboxOut, crsSrc)}";
                     int? featureMatched = null; 
 
                     using (var command = new SqlCommand(sqlCount, connection))
@@ -102,15 +104,23 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
                     featureCollection.NumberMatched = (int)featureMatched;
                     result.Messages.Add($"feature count with filter {featureCollection.NumberMatched}");
 
-                    if (request.Offset == null && request.Limit != null && request.Limit < featureCollection.NumberMatched)
+                    if (request.Offset == null && request.Limit != null)
                     {
                         result.Messages.Add($"force offset - because not set - to 0");
                         request.Offset = 0;
                     }
 
-                    if (request.Limit != null && request.Offset == null)
+                    if (request.Offset != null && request.Limit == null)
                     {
+                        result.Messages.Add($"force limit - because not set - to 100");
+                        request.Limit = 100;
+                    }
+
+                    if (request.Offset == null && request.Limit == null)
+                    {
+                        result.Messages.Add($"force offset/ limit - because not set - to 0 / 100");
                         request.Offset = 0;
+                        request.Limit = 100;
                     }
 
                     if (request.Offset != null && request.Limit != null)
@@ -131,7 +141,7 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
 
                     var fields = GetFields(connection, request);
 
-                    var sql = $"SELECT * FROM {(string)request.ConnectionParameters[DataTable]} WHERE {GetWhere(request, crsBboxOut)} ORDER BY {(string)request.ConnectionParameters[DataIdField]} OFFSET {request.Offset} ROWS FETCH NEXT {request.Limit} ROWS ONLY;";
+                    var sql = $"SELECT * FROM {(string)request.ConnectionParameters[DataTable]} WHERE {GetWhere(request, crsBboxOut, crsSrc)} ORDER BY {(string)request.ConnectionParameters[DataIdField]} OFFSET {request.Offset} ROWS FETCH NEXT {request.Limit} ROWS ONLY;";
 
                     result.Messages.Add($"sql queried: {sql}");
 
@@ -214,6 +224,23 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
 
                                     var wkt = geometryData.ToString();
                                     var geometry = GeometryService.GetOgrGeometryFromWkt(wkt);
+
+                                    // *********************************************************************************************************************
+                                    // reproject data
+
+                                    if (crsOut != crsSrc)
+                                    {
+                                        var srcCrs = new OSGeo.OSR.SpatialReference("");
+                                        srcCrs.ImportFromEPSG(crsSrc);
+
+                                        var outCrs = new OSGeo.OSR.SpatialReference("");
+                                        outCrs.ImportFromEPSG(crsOut);
+
+                                        var coordTrans = new OSGeo.OSR.CoordinateTransformation(srcCrs, outCrs);
+
+                                        geometry.Value.Transform(coordTrans);
+                                    }
+
                                     var geometryGeoJson = GeometryService.GetStringFromOgrGeometry(geometry.Value, "geojson", false);
 
                                     if (!string.IsNullOrEmpty(geometryGeoJson))
@@ -271,10 +298,10 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
             return result;
         }
 
-        private string GetWhere(GetItemRequest request, int crsBboxOut)
+        private string GetWhere(GetItemRequest request, int crsBboxOut, int crsSrc)
         {
             var dataWhere = request.ConnectionParameters[DataWhere] as string;
-            var bboxWhere = GetBBoxSpatialFilter(request, crsBboxOut);
+            var bboxWhere = GetBBoxSpatialFilter(request, crsBboxOut, crsSrc);
             var queryWhere = request.Query;
 
             var conditions = new List<string>();
@@ -297,7 +324,7 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
             return string.Join(" AND ", conditions);
         }
 
-        private string GetBBoxSpatialFilter(GetItemRequest request, int crsBboxOut)
+        private string GetBBoxSpatialFilter(GetItemRequest request, int crsBboxOut, int crsSrc)
         {
             string name = (string)request.ConnectionParameters[DataGeometryField];
             int srid = (int)request.ConnectionParameters[DataGeometrySrid];
@@ -312,25 +339,26 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
                 wktBbox = $"POLYGON(({request.Bbox[0]} {request.Bbox[1]}, {request.Bbox[2]} {request.Bbox[1]},{request.Bbox[2]} {request.Bbox[3]}, {request.Bbox[0]} {request.Bbox[3]}, {request.Bbox[0]} {request.Bbox[1]}))";
             }
 
-            // todo
-
-            //if (crsBboxOut != crsSrc)
-            //{
-            //    var outBboxCrs = new OSGeo.OSR.SpatialReference("");
-            //    outBboxCrs.ImportFromEPSG(crsBboxOut);
-            //    var t1 = outCrs.GetAxisOrientation(null, 0);
-            //    var t2 = outCrs.GetAxisOrientation(null, 1);
+            if (crsBboxOut != crsSrc)
+            {
+                var outBboxCrs = new OSGeo.OSR.SpatialReference("");
+                outBboxCrs.ImportFromEPSG(crsBboxOut);
+                //var t1 = outCrs.GetAxisOrientation(null, 0);
+                //var t2 = outCrs.GetAxisOrientation(null, 1);
 
 
-            //    var srcCrs = new OSGeo.OSR.SpatialReference("");
-            //    srcCrs.ImportFromEPSG(crsSrc);
-            //    var t3 = srcCrs.GetAxisOrientation(null, 0);
-            //    var t4 = srcCrs.GetAxisOrientation(null, 1);
+                var srcCrs = new OSGeo.OSR.SpatialReference("");
+                srcCrs.ImportFromEPSG(crsSrc);
+                //var t3 = srcCrs.GetAxisOrientation(null, 0);
+                //var t4 = srcCrs.GetAxisOrientation(null, 1);
 
-            //    var coordTransBbox = new OSGeo.OSR.CoordinateTransformation(outBboxCrs, srcCrs);
+                var coordTransBbox = new OSGeo.OSR.CoordinateTransformation(outBboxCrs, srcCrs);
 
-            //    geometryBbox.Transform(coordTransBbox);
-            //}
+                var geometryBbox = Geometry.CreateFromWkt(wktBbox);
+                geometryBbox.Transform(coordTransBbox);
+
+                wktBbox = GeometryService.GetStringFromOgrGeometry(geometryBbox, "wkt", false);
+            }
 
             return
                 $"{name}.STIntersects(geometry::STGeomFromText('{wktBbox}', {srid})) = 1";

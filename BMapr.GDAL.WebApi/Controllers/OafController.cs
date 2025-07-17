@@ -182,6 +182,7 @@ namespace BMapr.GDAL.WebApi.Controllers
                 },
                 CollectionId = "bb",
                 Bbox = bboxDouble,
+                BboxCrs = bboxCrs,
                 Crs = crs,
                 Offset = offset,
                 Limit = limit,
