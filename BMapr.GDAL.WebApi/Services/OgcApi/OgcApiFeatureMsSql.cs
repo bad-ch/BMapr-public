@@ -7,6 +7,7 @@ using Microsoft.Data.SqlClient;
 using Newtonsoft.Json;
 using System.Data;
 using System.Text;
+using Microsoft.AspNetCore.Connections;
 
 namespace BMapr.GDAL.WebApi.Services.OgcApi
 {
@@ -107,6 +108,11 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
                         request.Offset = 0;
                     }
 
+                    if (request.Limit != null && request.Offset == null)
+                    {
+                        request.Offset = 0;
+                    }
+
                     if (request.Offset != null && request.Limit != null)
                     {
                         var next = GetNavigationLink(true, request, (int)featureCollection.NumberMatched);
@@ -204,34 +210,16 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
 
                                 if (fieldGeometry != null)
                                 {
-                                    var sqlBytes = reader.GetSqlBytes(fields.First(x => x.Name == geometryFieldName).Index);
+                                    object geometryData = reader[fields.First(x => x.Name == geometryFieldName).Index].ToString();
 
-                                    if (sqlBytes != null)
+                                    var wkt = geometryData.ToString();
+                                    var geometry = GeometryService.GetOgrGeometryFromWkt(wkt);
+                                    var geometryGeoJson = GeometryService.GetStringFromOgrGeometry(geometry.Value, "geojson", false);
+
+                                    if (!string.IsNullOrEmpty(geometryGeoJson))
                                     {
-                                        //string hexWKB = BitConverter.ToString(sqlBytes.Value).Replace("-", "");
-                                        //SqlGeometry geometrySql = SqlGeometry.STGeomFromWKB(sqlBytes, (int)request.ConnectionParameters[DataGeometrySrid]);
-                                        //var wkt = geometrySql.STAsText().Value.ToString();
-
-                                        //byte[] geometryWKB = reader[geometryFieldName] as byte[];
-                                        //var geometryWKB = reader.GetBytes(geometryFieldName,);
-                                        //var wkbReader = new NetTopologySuite.IO.WKBReader();
-                                        //var geometryNT = wkbReader.Read(sqlBytes.Value);
-                                        //string wkt = geometryNT.ToText(); // Convert to WKT
-
-                                        object geometryData = reader[fields.First(x => x.Name == geometryFieldName).Index].ToString();
-                                        var wkt = geometryData.ToString();
-
-                                        //string wkt = reader.GetString(fields.First(x => x.Name == geometryFieldName).Index);
-
-                                        var geometry = GeometryService.GetOgrGeometryFromWkt(wkt);
-                                        var geometryGeoJson = GeometryService.GetStringFromOgrGeometry(geometry.Value, "geojson", false);
-
-                                        if (!string.IsNullOrEmpty(geometryGeoJson))
-                                        {
-                                            feature.Geometry = JsonConvert.DeserializeObject<dynamic>(geometryGeoJson)!;
-                                        }
+                                        feature.Geometry = JsonConvert.DeserializeObject<dynamic>(geometryGeoJson)!;
                                     }
-
                                 }
 
                                 featureCollection.Features.Add(feature);

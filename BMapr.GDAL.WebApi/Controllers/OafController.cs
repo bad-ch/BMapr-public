@@ -183,8 +183,8 @@ namespace BMapr.GDAL.WebApi.Controllers
                 CollectionId = "bb",
                 Bbox = bboxDouble,
                 Crs = crs,
-                Offset = 0,
-                Limit = 100,
+                Offset = offset,
+                Limit = limit,
                 Format = f,
                 Host = Request.Host.Host
 
