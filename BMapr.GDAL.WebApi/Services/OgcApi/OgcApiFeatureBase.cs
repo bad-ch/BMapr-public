@@ -1,5 +1,6 @@
 ﻿using Azure.Core;
 using BMapr.GDAL.WebApi.Models;
+using BMapr.GDAL.WebApi.Models.MapFile;
 using BMapr.GDAL.WebApi.Models.OgcApi.Features;
 using BMapr.GDAL.WebApi.Models.Spatial;
 using Microsoft.AspNetCore.Mvc;
@@ -13,6 +14,9 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
         public static readonly string SchemaJsonMimeType = "application/schema+json";
         public static readonly string EpsgCrsPrefix = "http://www.opengis.net/def/crs/EPSG/0/";
         public static readonly string CrsWgs84 = "http://www.opengis.net/def/crs/OGC/1.3/CRS84";
+
+        // todo change
+        public static readonly string PathToService = "api/oaf/features";
 
         protected List<CrsDefinition> CrsDefinitions { get; set; }
         protected Config Config { get; set; }
@@ -76,10 +80,10 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
 
             collection.Extent.Spatial.Bbox.Add(new List<double> { item.MinX, item.MinY, item.MaxX, item.MaxY });
 
-            collection.Links.Add(new Link { Rel = "self", Title = "This collection", Type = JsonMimeType, Href = $"{Config.Host}/api/ogcapi/features/{Project}/collections/{item.Name}/items" });
-            collection.Links.Add(new Link { Rel = "items", Title = $"{item.Name} as GeoJSON", Type = GeoJsonMimeType, Href = $"{Config.Host}/api/ogcapi/features/{Project}/collections/{item.Name}?f=geojson" });
-            collection.Links.Add(new Link { Rel = "queryables", Title = $"Get available attributes", Type = SchemaJsonMimeType, Href = $"{Config.Host}/api/ogcapi/features/{Project}/collections/{item.Name}/queryables?f=json" });
-            // collection.Links.Add(new Link() { Rel = "describedby", Title = $"Schema for {item.Name}", Type = JsonMimeType, Href = $"{Config.Host}/api/ogcapi/features/{Project}/collections/{item.Name}/schema?f=application/json" });
+            collection.Links.Add(new Link { Rel = "self", Title = "This collection", Type = JsonMimeType, Href = $"{Config.Host}/{PathToService}/{Project}/collections/{item.Name}/items" });
+            collection.Links.Add(new Link { Rel = "items", Title = $"{item.Name} as GeoJSON", Type = GeoJsonMimeType, Href = $"{Config.Host}/{PathToService}/{Project}/collections/{item.Name}?f=geojson" });
+            collection.Links.Add(new Link { Rel = "queryables", Title = $"Get available attributes", Type = SchemaJsonMimeType, Href = $"{Config.Host}/{PathToService}/{Project}/collections/{item.Name}/queryables?f=json" });
+            // collection.Links.Add(new Link() { Rel = "describedby", Title = $"Schema for {item.Name}", Type = JsonMimeType, Href = $"{Config.Host}/{PathToService}/{Project}/collections/{item.Name}/schema?f=application/json" });
 
             return new Result<Collection> { Value = collection, Succesfully = true };
         }
@@ -131,13 +135,116 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
             return crsBboxOut;
         }
 
+        public LandingPage GetLandingPage(string title, string description)
+        {
+            return new LandingPage
+            {
+                Title = title,
+                Description = description,
+                Links = new List<Link>
+                {
+                    new()
+                    {
+                        Rel = "service",
+                        Type = JsonMimeType,
+                        Title = "API definition for this enpoint as JSON",
+                        Href = $"{Config.Host}/{PathToService}/{Project}/?f=application/json",
+                    },
+                    new()
+                    {
+                        Rel = "service",
+                        Type = JsonMimeType,
+                        Title = "API definition for this enpoint as JSON",
+                        Href = $"{Config.Host}/{PathToService}/{Project}",
+                    },
+                    new()
+                    {
+                        Rel = "service",
+                        Type = JsonMimeType,
+                        Title = "API definition for this enpoint as JSON",
+                        Href = $"{Config.Host}/{PathToService}/{Project}/landingpage?f=application/json",
+                    },
+                    new()
+                    {
+                        Rel = "service",
+                        Type = JsonMimeType,
+                        Title = "API definition for this enpoint as JSON",
+                        Href = $"{Config.Host}/{PathToService}/{Project}/landingpage",
+                    },
+                    new()
+                    {
+                        Rel = "conformance",
+                        Type = JsonMimeType,
+                        Title = "Conformance Declaration as JSON",
+                        Href = $"{Config.Host}/{PathToService}/{Project}/conformance",
+                    },
+                    new()
+                    {
+                        Rel = "conformance",
+                        Type = JsonMimeType,
+                        Title = "Conformance Declaration as JSON",
+                        Href = $"{Config.Host}/{PathToService}/{Project}/conformance?f=application/json",
+                    },
+                    new()
+                    {
+                        Rel = "data",
+                        Type = JsonMimeType,
+                        Title = "Collections Metadata as JSON",
+                        Href = $"{Config.Host}/{PathToService}/{Project}/collections",
+                    },
+                    new()
+                    {
+                        Rel = "data",
+                        Type = JsonMimeType,
+                        Title = "Collections Metadata as JSON",
+                        Href = $"{Config.Host}/{PathToService}/{Project}/collections?f=application/json",
+                    },
+                    new()
+                    {
+                        Rel = "self",
+                        Type = JsonMimeType,
+                        Title = "This document",
+                        Href = $"{Config.Host}/{PathToService}/{Project}",
+                    },
+                    //new()
+                    //{
+                    //    Rel = "alternate",
+                    //    Type = "application/xml",
+                    //    Title = "This Document as XML",
+                    //    Href = $"{Config.Host}/{PathToService}/{Project}?f=application/xml"
+                    //},
+                },
+            };
+        }
+
+        public object GetConformance()
+        {
+            // todo make it more generic
+
+            return new
+            {
+                conformsTo = new List<string>
+                {
+                    "http://www.opengis.net/spec/ogcapi-common-1/1.0/conf/core",
+                    "http://www.opengis.net/spec/ogcapi-common-1/1.0/conf/json",
+                    "http://www.opengis.net/spec/ogcapi-common-1/1.0/conf/landing-page",
+                    "http://www.opengis.net/spec/ogcapi-common-2/1.0/conf/collections",
+                    "http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/core",
+                    "http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/geojson",
+                    "http://www.opengis.net/spec/ogcapi-features-2/1.0/conf/crs",
+                    "http://www.opengis.net/spec/ogcapi-features-3/1.0/conf/queryables",
+                    "http://www.opengis.net/spec/ogcapi-features-5/1.0/conf/schemas",
+                },
+            };
+        }
+
         // *********************************************************************************************************************************
         // Generate Links
         // *********************************************************************************************************************************
 
         public Link GetHomeLink()
         {
-            var urlCollections = $"{Config.Host}/api/ogcapi/features/{Project}/?f=json";
+            var urlCollections = $"{Config.Host}/{PathToService}/{Project}/?f=json";
 
             return new Link
             {
@@ -150,7 +257,7 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
 
         public Link GetCollectionsLink()
         {
-            var urlCollections = $"{Config.Host}/api/ogcapi/features/{Project}/collections?f=json";
+            var urlCollections = $"{Config.Host}/{PathToService}/{Project}/collections?f=json";
 
             return new Link
             {
@@ -163,7 +270,7 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
 
         public Link GetCollectionLink(string collectionId)
         {
-            var urlCollections = $"{Config.Host}/api/ogcapi/features/{Project}/collections/{collectionId}?f=json";
+            var urlCollections = $"{Config.Host}/{PathToService}/{Project}/collections/{collectionId}?f=json";
 
             return new Link
             {
@@ -176,7 +283,7 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
 
         public Link GetQueryablesLink(string collectionId)
         {
-            var urlCollections = $"{Config.Host}/api/ogcapi/features/{Project}/collections/{collectionId}/queryables?f=json";
+            var urlCollections = $"{Config.Host}/{PathToService}/{Project}/collections/{collectionId}/queryables?f=json";
 
             return new Link
             {
@@ -189,7 +296,7 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
 
         protected Link? GetNavigationLink(bool next, GetItemRequest request, int maxCount)
         {
-            var urlCollections = $"{Config.Host}/api/ogcapi/features/{Project}/collections/{request.CollectionId}/items?";
+            var urlCollections = $"{Config.Host}/{PathToService}/{Project}/collections/{request.CollectionId}/items?";
 
             var flag = false;
 
