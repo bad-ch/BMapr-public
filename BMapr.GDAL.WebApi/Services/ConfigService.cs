@@ -15,6 +15,8 @@ namespace BMapr.GDAL.WebApi.Services
             string dataProjects = iConfig.GetSection("Settings").GetSection("DataProjects").Value;
             string dataShare = iConfig.GetSection("Settings").GetSection("DataShare").Value;
             
+            config.Placeholders = iConfig.GetSection("Settings").GetSection("Placeholders").Get<Dictionary<string, string>>();
+
             config.AssemblyPath = PathService.AssemblyDirectory();
             config.ApplicationRoot = new DirectoryInfo(environment.ContentRootPath);
 

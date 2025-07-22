@@ -9,6 +9,7 @@
         public DirectoryInfo? DataProjects { get; set; }
         public DirectoryInfo? DataShare { get; set; }
         public DirectoryInfo? Temp { get; set; }
+        public Dictionary<string, string>? Placeholders { get; set; } = new();
 
         public bool? Cache { get; set; }
 
