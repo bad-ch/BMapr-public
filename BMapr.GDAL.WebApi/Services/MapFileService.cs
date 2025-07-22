@@ -127,6 +127,14 @@ namespace BMapr.GDAL.WebApi.Services
                 mapContent = mapContent.Replace("#dataPath#", config.Data?.FullName.Replace(@"\","/"));
                 mapContent = mapContent.Replace("#projectPath#", config.DataProject(project).FullName.Replace(@"\", "/"));
 
+                if (config.Placeholders != null && config.Placeholders.Any())
+                {
+                    foreach (var keyValue in config.Placeholders)
+                    {
+                        mapContent = mapContent.Replace($"#{keyValue.Key}#", keyValue.Value);
+                    }
+                }
+
                 File.WriteAllText(resolvedMapFile, mapContent);
                 File.WriteAllText(newestMapFile, mapContent);
             }
