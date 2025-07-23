@@ -28,6 +28,8 @@
     <Optimize>False</Optimize>
   </PropertyGroup>
 
+<PropertyGroup><SatelliteResourceLanguages>en</SatelliteResourceLanguages></PropertyGroup>
+
   <ItemGroup>
     <Compile Remove="Data\**" />
     <Compile Remove="lib\**" />
