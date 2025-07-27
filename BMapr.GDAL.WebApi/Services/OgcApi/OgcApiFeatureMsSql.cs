@@ -151,6 +151,10 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
                         {
                             int j = 0;
 
+                            var geometryFieldName = (string)request.ConnectionParameters[DataGeometryField];
+                            var fieldGeometry = fields.FirstOrDefault(x => x.Name == geometryFieldName);
+                            var geometryIndex = fields.First(x => x.Name == geometryFieldName).Index;
+
                             while (reader.Read())
                             {
                                 var feature = new Models.OgcApi.Features.Feature { Type = "Feature" };
@@ -211,17 +215,24 @@ namespace BMapr.GDAL.WebApi.Services.OgcApi
                                     }
                                 });
 
-                                var geometryFieldName = (string) request.ConnectionParameters[DataGeometryField];
-                                var fieldGeometry = fields.FirstOrDefault(x => x.Name == geometryFieldName);
-
                                 // todo handle string,guid ids as well
                                 var idFieldName = (string)request.ConnectionParameters[DataIdField];
                                 feature.Id = reader.GetInt32(idFieldName).ToString();
 
                                 if (fieldGeometry != null)
                                 {
-                                    object geometryData = reader[fields.First(x => x.Name == geometryFieldName).Index].ToString();
+                                    object geometryData = reader[geometryIndex];
 
+                                    //if (geometryData is SqlGeometry)
+                                    //{
+                                    //    result.AddMessage("Geometry is a SqlGeometry type");
+                                    //}
+                                    //else
+                                    //{
+                                    //    result.AddMessage("Geometry is a SqlGeography type");
+                                    //}
+
+                                    // sql data type has no option to convert to a json format, that's the reason why we use OGR to create a Geojson geometry
                                     var wkt = geometryData.ToString();
                                     var geometry = GeometryService.GetOgrGeometryFromWkt(wkt);
 
