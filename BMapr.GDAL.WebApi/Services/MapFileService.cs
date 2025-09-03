@@ -1,6 +1,7 @@
 using BMapr.GDAL.WebApi.Models;
 using Microsoft.Extensions.Caching.Memory;
 using OSGeo.MapServer;
+using System.Text.RegularExpressions;
 
 namespace BMapr.GDAL.WebApi.Services
 {
@@ -26,13 +27,13 @@ namespace BMapr.GDAL.WebApi.Services
                 mapConfig.CacheWfsMetadata = Convert.ToBoolean(map.web.metadata.get("msh_CacheWfsMetadata", "false"));
                 mapConfig.CacheWfsGetFeature = Convert.ToBoolean(map.web.metadata.get("msh_CacheWfsGetFeature", "false"));
 
-                for (int i = 0; i < map.numlayers; i++)
+                for (var i = 0; i < map.numlayers; i++)
                 {
                     var layer = map.getLayer(i);
 
                     if (!mapConfig.MapLayers.ContainsKey(layer.name))
                     {
-                        mapConfig.MapLayers.Add(layer.name,new MapLayerConfig());
+                        mapConfig.MapLayers.Add(layer.name, new MapLayerConfig());
                     }
 
                     mapConfig.MapLayers[layer.name].WFSTuseMsSqlServerFeatureService = Convert.ToBoolean(layer.metadata.get("msh_WFSTuseMsSqlServerFeatureService", "false"));
@@ -43,7 +44,9 @@ namespace BMapr.GDAL.WebApi.Services
                     mapConfig.MapLayers[layer.name].Id = layer.metadata.get("msh_Id", "id");
                     mapConfig.MapLayers[layer.name].Connection = layer.metadata.get("msh_Connection", "");
                     mapConfig.MapLayers[layer.name].LayerName = layer.metadata.get("msh_Layername", "");
-                    mapConfig.MapLayers[layer.name].EPSG = string.IsNullOrEmpty(layer.getProjection().ToLower()) ? 0 : Convert.ToInt32(layer.getProjection().ToLower().Replace("init=epsg:",""));
+                    mapConfig.MapLayers[layer.name].EPSG = string.IsNullOrEmpty(layer.getProjection().ToLower())
+                        ? 0
+                        : Convert.ToInt32(layer.getProjection().ToLower().Replace("init=epsg:", ""));
                 }
 
                 result.Value = mapConfig;
@@ -65,7 +68,7 @@ namespace BMapr.GDAL.WebApi.Services
 
         public static Result<MapConfig> GetMapConfigFromCache(string mapKey, string mapFile, Config config, string project)
         {
-            string? mapPath = GetMapPathFromCache(mapKey, mapFile, config, project);
+            var mapPath = GetMapPathFromCache(mapKey, mapFile, config, project);
 
             if (!File.Exists(mapPath))
             {
@@ -122,18 +125,8 @@ namespace BMapr.GDAL.WebApi.Services
             {
                 var mapContent = File.ReadAllText(mapFile);
 
-                mapContent = mapContent.Replace("#host#", config.Host);
-                mapContent = mapContent.Replace("#project#", project);
-                mapContent = mapContent.Replace("#dataPath#", config.Data?.FullName.Replace(@"\","/"));
-                mapContent = mapContent.Replace("#projectPath#", config.DataProject(project).FullName.Replace(@"\", "/"));
-
-                if (config.Placeholders != null && config.Placeholders.Any())
-                {
-                    foreach (var keyValue in config.Placeholders)
-                    {
-                        mapContent = mapContent.Replace($"#{keyValue.Key}#", keyValue.Value);
-                    }
-                }
+                mapContent = SearchReplacePlaceholders(mapContent, config, project);
+                mapContent = SearchReplaceIncludes(mapContent, config, project);
 
                 File.WriteAllText(resolvedMapFile, mapContent);
                 File.WriteAllText(newestMapFile, mapContent);
@@ -142,9 +135,49 @@ namespace BMapr.GDAL.WebApi.Services
             return resolvedMapFile;
         }
 
+        private static string SearchReplacePlaceholders(string mapContent, Config config, string project)
+        {
+            mapContent = mapContent.Replace("#host#", config.Host);
+            mapContent = mapContent.Replace("#project#", project);
+            mapContent = mapContent.Replace("#dataPath#", config.Data?.FullName.Replace(@"\", "/"));
+            mapContent = mapContent.Replace("#projectPath#", config.DataProject(project).FullName.Replace(@"\", "/"));
+
+            if (config.Placeholders != null && config.Placeholders.Any())
+            {
+                foreach (var keyValue in config.Placeholders)
+                {
+                    mapContent = mapContent.Replace($"#{keyValue.Key}#", keyValue.Value);
+                }
+            }
+
+            return mapContent;
+        }
+
+        private static string SearchReplaceIncludes(string mapContent, Config config, string project)
+        {
+            var pattern = @"BMAPR_INCLUDE\s*""([^""]+)""";
+
+            return Regex.Replace(mapContent, pattern, match =>
+            {
+                // Extract the file path from the match group
+                var filePath = match.Groups[1].Value;
+
+                try
+                {
+                    var fileContent = File.ReadAllText(filePath);
+                    return SearchReplacePlaceholders(fileContent, config, project);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error reading file: {ex.Message}");
+                    return $"# BMAPR_INCLUDE, error unable to read file at {filePath}]";
+                }
+            });
+        }
+
         public static Result<MapMetadata> GetMapFromProject(string projectMap, Config config)
         {
-            var result = new Result<MapMetadata>() {Succesfully = false};
+            var result = new Result<MapMetadata> { Succesfully = false };
             var project = projectMap;
             var mapName = "";
 
@@ -198,14 +231,14 @@ namespace BMapr.GDAL.WebApi.Services
                 }
             }
             else
-            {   
+            {
                 result.AddMessage($"Take first map file <<{mapFileInfo?.Name}>>");
             }
 
             var mapFile = mapFileInfo?.FullName;
             var mapFileName = mapFileInfo?.Name;
 
-            if (mapFile == null || !System.IO.File.Exists(mapFile))
+            if (mapFile == null || !File.Exists(mapFile))
             {
                 result.AddMessage("Map file not found");
                 return result;
@@ -216,7 +249,7 @@ namespace BMapr.GDAL.WebApi.Services
 
             result.Value = new MapMetadata();
 
-            result.Value.HostKey = config.Host.Replace(":","_").Replace("/","_").Replace("\\","");
+            result.Value.HostKey = config.Host.Replace(":", "_").Replace("/", "_").Replace("\\", "");
             result.Value.MapKey = mapFileName.Replace(".map", "");
             result.Value.Key = $"{result.Value.HostKey}_{result.Value.MapKey}_{md5hash}";
             result.Value.FilePath = mapFile;
