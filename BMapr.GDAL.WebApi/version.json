@@ -1,6 +1,6 @@
-{"CreationDate":"17.07.2025", 
-"CreationTime":" 0:21:59.76", 
-"Branch":"GDAL_3.11.1_MS_8.4", 
-"Commit":"838a4d45df0dc3fa16fab71df23e05822becb531", 
-"Version":"0.9.28", 
-"Tag":"0.9.28-9-g838a4d4"} 
+{"CreationDate":"03.09.2025", 
+"CreationTime":"23:14:31.19", 
+"Branch":"master", 
+"Commit":"79e7552f364c1a7bcf6243d0cfae15aceb0e6bd7", 
+"Version":"0.9.36", 
+"Tag":"0.9.36"} 
