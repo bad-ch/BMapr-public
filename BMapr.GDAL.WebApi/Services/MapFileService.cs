@@ -155,7 +155,7 @@ namespace BMapr.GDAL.WebApi.Services
 
         private static string SearchReplaceIncludes(string mapContent, Config config, string project)
         {
-            var pattern = @"BMAPR_INCLUDE\s*""([^""]+)""";
+            var pattern = @"BMAPR_INCLUDE\s+[""'](.*?)[\""']";
 
             return Regex.Replace(mapContent, pattern, match =>
             {
