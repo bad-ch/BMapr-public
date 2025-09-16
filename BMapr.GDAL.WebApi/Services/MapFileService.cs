@@ -55,7 +55,7 @@ namespace BMapr.GDAL.WebApi.Services
             catch (Exception ex)
             {
                 result.Succesfully = false;
-                result.AddMessage("Get config from ma file FAIL", ex);
+                result.AddMessage($"Parsing of map file FAIL: {ex.Message}", ex);
             }
 
             if (map != null)
