@@ -1,7 +1,7 @@
-﻿using BMapr.GDAL.WebApi.Models.Spatial;
+﻿using BMapr.GDAL.WebApi.Models.Db;
+using BMapr.GDAL.WebApi.Models.Spatial;
+using Microsoft.Data.SqlClient;
 using System.Data;
-using System.Data.SqlClient;
-using BMapr.GDAL.WebApi.Models.Db;
 using System.Text;
 
 namespace BMapr.GDAL.WebApi.Services
