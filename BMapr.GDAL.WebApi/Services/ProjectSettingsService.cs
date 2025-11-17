@@ -11,9 +11,9 @@ namespace BMapr.GDAL.WebApi.Services
             return "_projectSettings.json";
         }
 
-        public static ProjectSettings? Get(string guid, Config config)
+        public static ProjectSettings? Get(string project, Config config)
         {
-            var projectFolder = Path.Combine(config.DataProjects.FullName, guid);
+            var projectFolder = Path.Combine(config.DataProjects.FullName, project);
 
             if (!Directory.Exists(config.DataProjects.FullName) || !Directory.Exists(projectFolder))
             {
@@ -38,9 +38,9 @@ namespace BMapr.GDAL.WebApi.Services
             return JsonConvert.DeserializeObject<ProjectSettings>(File.ReadAllText(projectSettingsPath));
         }
 
-        public static ProjectSettings CreateNew(Guid guid, Config config)
+        public static ProjectSettings CreateNew(string project, Config config)
         {
-            var projectFolder = Path.Combine(config.DataProjects.FullName, guid.ToString());
+            var projectFolder = Path.Combine(config.DataProjects.FullName, project);
 
             if (!Directory.Exists(config.DataProjects.FullName) || !Directory.Exists(projectFolder))
             {

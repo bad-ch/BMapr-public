@@ -109,7 +109,7 @@ namespace BMapr.GDAL.WebApi.Controllers
             var dataProject = Path.Combine(dataProjects, guid.ToString());
 
             Directory.CreateDirectory(dataProject);
-            var projectSettings = ProjectSettingsService.CreateNew(guid, Config);
+            var projectSettings = ProjectSettingsService.CreateNew(guid.ToString(), Config);
 
             var result = FileService.CopyDataToProjectFolder(Request, dataProject);
 

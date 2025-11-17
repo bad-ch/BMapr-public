@@ -58,6 +58,9 @@ builder.Services.AddSwaggerGen(options =>
     options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFilename));
 });
 
+builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
+builder.Services.AddSingleton<IWebHostEnvironment>(builder.Environment);
+
 builder.Services.AddMemoryCache();
 builder.Services.AddAuthentication("BasicAuthentication").AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>("BasicAuthentication", null);
 builder.Services.AddAuthorization(options => { options.AddPolicy("BasicAuthentication", new AuthorizationPolicyBuilder("BasicAuthentication").RequireAuthenticatedUser().Build());});
@@ -97,6 +100,8 @@ builder.Services.AddQuartzServer(options =>
 var configValue = string.IsNullOrEmpty(builder.Configuration.GetValue<string>("Settings:WebApplication")) ? "" : $"/{builder.Configuration.GetValue<string>("Settings:WebApplication")}";
 var app = builder.Build();
 
+ServiceLocator.ServiceProvider = app.Services;
+
 app.UseSwagger();
 app.UseSwaggerUI(options =>
 {
@@ -133,4 +138,9 @@ void OnStarted()
 void OnStopped()
 {
     app.Logger.LogInformation("end starts");
+}
+
+public class ServiceLocator
+{
+    public static IServiceProvider ServiceProvider { get; set; }
 }

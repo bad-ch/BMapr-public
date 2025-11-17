@@ -1,11 +1,9 @@
-using System.Text;
 using BMapr.GDAL.WebApi.Controllers;
 using BMapr.GDAL.WebApi.Models;
 using BMapr.GDAL.WebApi.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
-using Newtonsoft.Json;
-using OSGeo.MapServer;
+using System.Text;
 
 namespace BMapr.WebApi.Controllers
 {
