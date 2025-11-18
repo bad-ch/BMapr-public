@@ -1,3 +1,4 @@
+using BMapr.GDAL.WebApi.Authentication.OgcBasic;
 using BMapr.GDAL.WebApi.Controllers;
 using BMapr.GDAL.WebApi.Models;
 using BMapr.GDAL.WebApi.Services;
@@ -11,6 +12,7 @@ namespace BMapr.WebApi.Controllers
     /// OCG interface for UMN MapServer
     /// </summary>
     [ApiController]
+    [TypeFilter(typeof(CheckForPassword))]
     [Route("api/Ogc")]
     public class OgcController : DefaultController
     {
