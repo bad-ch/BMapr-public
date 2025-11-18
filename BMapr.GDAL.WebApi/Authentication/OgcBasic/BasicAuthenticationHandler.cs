@@ -6,26 +6,8 @@ namespace BMapr.GDAL.WebApi.Authentication.OgcBasic
 {
     public class BasicAuthenticationHandler
     {
-        private readonly IConfiguration _configuration;
-        private readonly IWebHostEnvironment _environment;
-        private readonly Config _config;
-
-        public BasicAuthenticationHandler()
+        public bool ValidateCredentials(ProjectSettings projectSettings, string username, string password)
         {
-            _configuration = ServiceLocator.ServiceProvider.GetService<IConfiguration>();
-            _environment = ServiceLocator.ServiceProvider.GetService<IWebHostEnvironment>();
-            _config = ConfigService.Get(_configuration, _environment);
-        }
-
-        public bool ValidateCredentials(string project, string username, string password)
-        {
-            var projectSettings = ProjectSettingsService.Get(project, _config);
-
-            if (projectSettings == null)
-            {
-                return false;
-            }
-
             if (string.IsNullOrEmpty(projectSettings.BasicAuthenticationUser) ||
                 string.IsNullOrEmpty(projectSettings.BasicAuthenticationPassword))
             {
@@ -35,7 +17,7 @@ namespace BMapr.GDAL.WebApi.Authentication.OgcBasic
             return username == projectSettings.BasicAuthenticationUser && password == projectSettings.BasicAuthenticationPassword;
         }
 
-        public bool IsAuthenticationSuccessfully(HttpContext context, string project, out string username)
+        public bool IsAuthenticationSuccessfully(HttpContext context, ProjectSettings projectSettings, out string username)
         {
             username = null;
             string authHeader = context.Request.Headers["Authorization"];
@@ -57,7 +39,7 @@ namespace BMapr.GDAL.WebApi.Authentication.OgcBasic
                     var user = parts[0];
                     var pass = parts[1];
 
-                    if (ValidateCredentials(project, user, pass))
+                    if (ValidateCredentials(projectSettings, user, pass))
                     {
                         username = user;
                         return true;
@@ -66,7 +48,6 @@ namespace BMapr.GDAL.WebApi.Authentication.OgcBasic
             }
             catch
             {
-                // Handle decoding issues
                 return false;
             }
 

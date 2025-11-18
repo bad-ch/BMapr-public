@@ -12,7 +12,7 @@ namespace BMapr.WebApi.Controllers
     /// OCG interface for UMN MapServer
     /// </summary>
     [ApiController]
-    [TypeFilter(typeof(CheckForPassword))]
+    [BasicAuthIfPassword]
     [Route("api/Ogc")]
     public class OgcController : DefaultController
     {
