@@ -135,7 +135,7 @@ namespace BMapr.GDAL.WebApi.Services
 
                     foreach (XmlNode xmlNode in xmlDoc.FirstChild?.ChildNodes)
                     {
-                        if (xmlNode.LocalName.ToLower() == "geometry" || xmlNode.LocalName.ToLower() == "shape" || xmlNode.LocalName.ToLower() == "msgeometry" || xmlNode.LocalName.ToLower() == "geom")
+                        if (xmlNode.LocalName.ToLower() == "geometry" || xmlNode.LocalName.ToLower() == "shape" || xmlNode.LocalName.ToLower() == "msgeometry" || xmlNode.LocalName.ToLower() == "geom" || xmlNode.LocalName.ToLower() == layerConfig.GeometryFieldName.ToLower())
                         {
                             var geometryResult = GeometryService.GetOgrGeometryFromGml(xmlNode.InnerXml);
                             var geometryWkt = GeometryService.GetStringFromOgrGeometry(geometryResult.Value, "wkt", true);
@@ -220,7 +220,7 @@ namespace BMapr.GDAL.WebApi.Services
                     {
                         var name = RemoveNamespace(property.Name);
 
-                        if (name.ToLower() == "geometry" || name.ToLower() == "shape" || name.ToLower() == "msgeometry" || name.ToLower() == "geom")
+                        if (name.ToLower() == "geometry" || name.ToLower() == "shape" || name.ToLower() == "msgeometry" || name.ToLower() == "geom" || name.ToLower() == layerConfig.GeometryFieldName.ToLower())
                         {
                             var geometryResult = GeometryService.GetOgrGeometryFromGml(property.Value.ToString());
                             var geometryWkt = GeometryService.GetStringFromOgrGeometry(geometryResult.Value, "wkt", true);
