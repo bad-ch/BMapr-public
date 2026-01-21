@@ -962,6 +962,14 @@ namespace BMapr.GDAL.WebApi.Models.MapFile
         [JsonPropertyName("msh_IdType")]
         public string MshIdType;
 
+        [JsonProperty("msh_TableName")]
+        [JsonPropertyName("msh_TableName")]
+        public string MshTableName;
+
+        [JsonProperty("msh_GeometryFieldName")]
+        [JsonPropertyName("msh_GeometryFieldName")]
+        public string MshGeometryFieldName;
+
         [JsonProperty("oaf_description")]
         [JsonPropertyName("oaf_description")]
         public string OafDescription;

@@ -39,6 +39,8 @@ namespace BMapr.GDAL.WebApi.Services
                     mapConfig.MapLayers[layer.name].WFSTuseMsSqlServerFeatureService = Convert.ToBoolean(layer.metadata.get("msh_WFSTuseMsSqlServerFeatureService", "false"));
                     mapConfig.MapLayers[layer.name].WFSTMsSqlServerGeography = Convert.ToBoolean(layer.metadata.get("msh_WFSTMsSqlServerGeography", "false"));
                     mapConfig.MapLayers[layer.name].IdType = layer.metadata.get("msh_IdType", "");
+                    mapConfig.MapLayers[layer.name].TableName = layer.metadata.get("msh_TableName", "");
+                    mapConfig.MapLayers[layer.name].GeometryFieldName= layer.metadata.get("msh_GeometryFieldName", "");
                     mapConfig.MapLayers[layer.name].IdSquenceManual = Convert.ToBoolean(layer.metadata.get("msh_IdSquenceManual", "false"));
                     mapConfig.MapLayers[layer.name].IdSequenceStartValue = Convert.ToInt32(layer.metadata.get("msh_IdSequenceStartValue", "0"));
                     mapConfig.MapLayers[layer.name].Id = layer.metadata.get("msh_Id", "id");

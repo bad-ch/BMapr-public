@@ -9,8 +9,6 @@ namespace BMapr.GDAL.WebApi.Services
 {
     public class WfsService
     {
-        //private static ILogger<WfsService> _logger;
-
         public static ActionResult Transaction(Config config, string project, string contentBody)
         {
             var mapMetadata = MapFileService.GetMapFromProject(project, config);
@@ -81,6 +79,7 @@ namespace BMapr.GDAL.WebApi.Services
 
                     layerName = xmlDoc.FirstChild?.LocalName;
                     layerConfig = mapConfig.GetLayerConfig(layerName);
+                    var tableName = string.IsNullOrEmpty(layerConfig.TableName) ? layerName : layerConfig.TableName;
 
                     if (featureInsertCount == 0)
                     {
@@ -90,7 +89,7 @@ namespace BMapr.GDAL.WebApi.Services
 
                         if (layerConfig.WFSTuseMsSqlServerFeatureService)
                         {
-                            insertFeatureServiceMsSql = new FeatureServiceMsSql(layerConfig.Connection, layerName, layerConfig.WFSTMsSqlServerGeography, mapConfig.WFST110debug, layerConfig.IdType);
+                            insertFeatureServiceMsSql = new FeatureServiceMsSql(layerConfig.Connection, tableName, layerConfig.WFSTMsSqlServerGeography, mapConfig.WFST110debug, layerConfig.IdType);
                         }
 
                         if (layerConfig.IdSquenceManual)
@@ -186,10 +185,12 @@ namespace BMapr.GDAL.WebApi.Services
             {
                 layerName = RemoveNamespace(transaction.Update.First().typeName);
                 layerConfig = mapConfig.GetLayerConfig(layerName);
+                var tableName = string.IsNullOrEmpty(layerConfig.TableName) ? layerName : layerConfig.TableName;
+
 
                 if (layerConfig.WFSTuseMsSqlServerFeatureService)
                 {
-                    updateFeatureServiceMsSql = new FeatureServiceMsSql(layerConfig.Connection, layerName, layerConfig.WFSTMsSqlServerGeography, mapConfig.WFST110debug, layerConfig.IdType);
+                    updateFeatureServiceMsSql = new FeatureServiceMsSql(layerConfig.Connection, tableName, layerConfig.WFSTMsSqlServerGeography, mapConfig.WFST110debug, layerConfig.IdType);
                 }
 
                 var featureList = new FeatureList()
@@ -261,10 +262,11 @@ namespace BMapr.GDAL.WebApi.Services
             {
                 layerName = RemoveNamespace(transaction.Delete.First().typeName);
                 layerConfig = mapConfig.GetLayerConfig(layerName);
+                var tableName = string.IsNullOrEmpty(layerConfig.TableName) ? layerName : layerConfig.TableName;
 
                 if (layerConfig.WFSTuseMsSqlServerFeatureService)
                 {
-                    deleteFeatureServiceMsSql = new FeatureServiceMsSql(layerConfig.Connection, layerName, layerConfig.WFSTMsSqlServerGeography, mapConfig.WFST110debug, layerConfig.IdType);
+                    deleteFeatureServiceMsSql = new FeatureServiceMsSql(layerConfig.Connection, tableName, layerConfig.WFSTMsSqlServerGeography, mapConfig.WFST110debug, layerConfig.IdType);
                 }
 
                 var featureList = new FeatureList()
@@ -325,7 +327,7 @@ namespace BMapr.GDAL.WebApi.Services
             if (featureListInsert.Bodies.Any())
             {
                 var insertResult = new List<TransactionResponseFeature>();
-                var prefix = layerName; //mapConfig.Prefix;
+                var prefix = layerName;
 
                 foreach (var feature in featureListInsert.Bodies)
                 {
@@ -400,9 +402,6 @@ namespace BMapr.GDAL.WebApi.Services
             }
 
             var modifiedContent = xmlDoc.OuterXml;
-
-            // todo remove or make it generic only for debugging
-            // modifiedContent = modifiedContent.Replace("https://ogc.dev.local", "https://localhost:7090");
 
             return System.Text.Encoding.UTF8.GetBytes(modifiedContent);
         }
