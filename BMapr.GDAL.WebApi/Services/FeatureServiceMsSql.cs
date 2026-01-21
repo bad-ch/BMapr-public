@@ -1,13 +1,17 @@
 ﻿using BMapr.GDAL.WebApi.Models.Db;
 using BMapr.GDAL.WebApi.Models.Spatial;
+using LiteDB;
 using Microsoft.Data.SqlClient;
+using System.ClientModel.Primitives;
 using System.Data;
 using System.Text;
 
 namespace BMapr.GDAL.WebApi.Services
 {
-    public class FeatureServiceMsSql
+    public class FeatureServiceMsSql : IDisposable
     {
+        private readonly ILogger<FeatureServiceMsSql>? _logger;
+
         public SqlConnection Connection { get; set; }
         public string TableName { get; set; }
         public List<DbField> Fields { get; set; }
@@ -16,175 +20,221 @@ namespace BMapr.GDAL.WebApi.Services
         public bool UseGeographyType { get; set; }
         public string IdType { get; set; }
 
-        public FeatureServiceMsSql(string connection, string tableName, bool useGeographyType = false,bool sqlLog = false, string idType = "Incr")
+        public FeatureServiceMsSql(string connectionString, string tableName, bool useGeographyType = false,bool sqlLog = false, string idType = "Incr", ILogger<FeatureServiceMsSql>? logger = null)
         {
-            Connection = new SqlConnection(connection);
-            Connection.Open();
-            TableName = tableName;
-            Fields = GetFields();
+            _logger = logger;
+
+            if (string.IsNullOrWhiteSpace(connectionString))
+                throw new ArgumentException("Connection string must not be empty.", nameof(connectionString));
+            if (string.IsNullOrWhiteSpace(tableName))
+                throw new ArgumentException("Table name must not be empty.", nameof(tableName));
+
+            Connection = new SqlConnection(connectionString);
+
+            try
+            {
+                Connection.Open();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Failed to open SQL connection.");
+                throw;
+            }
+
             SqlLog = new StringBuilder();
             SqlLogEnabled = sqlLog;
+
+            TableName = tableName;
             UseGeographyType = useGeographyType;
             IdType = idType;
+
+            try
+            {
+                Fields = GetFields();
+                _logger?.LogDebug("Loaded {FieldCount} fields for table {Table}.", Fields.Count, TableName);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Failed to read schema for table {Table}.", TableName);
+                throw;
+            }
         }
 
         public void Dispose()
         {
-            Connection.Close();
-            Connection.Dispose();
-        }
-
-        private string GetDataTypeFromIdType(string idType)
-        {
-            switch (idType)
+            try
             {
-                case "AutoGuid":
-                    return "uniqueidentifier";
-                case "AutoInt":
-                    return "int";
-                case "AutoBigInt":
-                    return "bigint";
+                if (Connection.State != ConnectionState.Closed)
+                    Connection.Close();
             }
-
-            throw new Exception($"Id type <{idType}> not supported");
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "Error while closing connection.");
+            }
+            finally
+            {
+                Connection.Dispose();
+            }
         }
+        private string GetDataTypeFromIdType(string idType) => idType switch
+        {
+            "AutoGuid" => "uniqueidentifier",
+            "AutoInt" => "int",
+            "AutoBigInt" => "bigint",
+            _ => throw new InvalidOperationException($"Id type <{idType}> not supported")
+        };
 
         public void Insert(FeatureList featureList)
         {
-            LogSql(SqlLogEnabled, "");
             LogSql(SqlLogEnabled, "-- INSERT");
-            LogSql(SqlLogEnabled, "");
 
             var transaction = Connection.BeginTransaction("BeginTransaction");
 
-            foreach (var featureBody in featureList.Bodies)
+            try
             {
-                var values = GetValues(featureBody);
-
-                if (!values.Any())
+                foreach (var featureBody in featureList.Bodies)
                 {
-                    //todo log
-                    continue;
-                }
+                    var values = GetValues(featureBody);
 
-                var colums = string.Join(',', values.Where(x => x.IsAutoIncrement == null || !((bool)x.IsAutoIncrement)).Select(x => x.Name));
-                var data = string.Join(',', values.Where(x=> x.IsAutoIncrement == null || !((bool)x.IsAutoIncrement)).Select(x => x.Value));
-                var sql = $"INSERT INTO {TableName} ({colums}) VALUES({data});{(IdType == "Incr" ? "SELECT @NEWID = SCOPE_IDENTITY();" : "")}";
-
-                if (IdType== "AutoGuid" || IdType == "AutoInt" || IdType == "AutoBigInt")
-                {
-                    colums = string.Join(',', values.Where(x => x.Name != featureList.IdFieldName).Select(x => x.Name));
-                    data = string.Join(',', values.Where(x => x.Name != featureList.IdFieldName).Select(x => x.Value));
-
-                    sql = $"DECLARE @MyTableVar table([{featureList.IdFieldName}] [{GetDataTypeFromIdType(IdType)}]);INSERT INTO {TableName} ({colums}) OUTPUT INSERTED.[{featureList.IdFieldName}] INTO @MyTableVar VALUES({data});SELECT [{featureList.IdFieldName}] FROM @MyTableVar;";
-                }
-
-                LogSql(SqlLogEnabled, sql);
-                //File.WriteAllText(Path.Combine(Path.GetTempPath(), $"SQL INSERT {Guid.NewGuid()}"), sql);
-
-                if (IdType == "Incr")
-                {
-                    using (var cmd = new SqlCommand(sql, Connection, transaction))
+                    if (!values.Any())
                     {
-                        cmd.Parameters.Add("@NEWID", SqlDbType.Int).Direction = ParameterDirection.Output;
-                        cmd.ExecuteScalar();
+                        _logger?.LogWarning("Insert, get no values");
+                        continue;
+                    }
 
-                        var newId = cmd.Parameters["@NEWID"];
-                        featureBody.Id = Convert.ToInt64(newId.Value);
+                    var colums = string.Join(',', values.Where(x => x.IsAutoIncrement == null || !((bool)x.IsAutoIncrement)).Select(x => x.Name));
+                    var data = string.Join(',', values.Where(x => x.IsAutoIncrement == null || !((bool)x.IsAutoIncrement)).Select(x => x.Value));
+                    var sql = $"INSERT INTO {TableName} ({colums}) VALUES({data});{(IdType == "Incr" ? "SELECT @NEWID = SCOPE_IDENTITY();" : "")}";
+
+                    if (IdType == "AutoGuid" || IdType == "AutoInt" || IdType == "AutoBigInt")
+                    {
+                        colums = string.Join(',', values.Where(x => x.Name != featureList.IdFieldName).Select(x => x.Name));
+                        data = string.Join(',', values.Where(x => x.Name != featureList.IdFieldName).Select(x => x.Value));
+
+                        sql = $"DECLARE @MyTableVar table([{featureList.IdFieldName}] [{GetDataTypeFromIdType(IdType)}]);INSERT INTO {TableName} ({colums}) OUTPUT INSERTED.[{featureList.IdFieldName}] INTO @MyTableVar VALUES({data});SELECT [{featureList.IdFieldName}] FROM @MyTableVar;";
+                    }
+
+                    LogSql(SqlLogEnabled, sql);
+
+                    if (IdType == "Incr")
+                    {
+                        using (var cmd = new SqlCommand(sql, Connection, transaction))
+                        {
+                            cmd.Parameters.Add("@NEWID", SqlDbType.Int).Direction = ParameterDirection.Output;
+                            cmd.ExecuteScalar();
+
+                            var newId = cmd.Parameters["@NEWID"];
+                            featureBody.Id = Convert.ToInt64(newId.Value);
+                        }
+                    }
+                    else if (IdType == "AutoGuid" || IdType == "AutoInt" || IdType == "AutoBigInt")
+                    {
+                        using (var cmd = new SqlCommand(sql, Connection, transaction))
+                        {
+                            var result = cmd.ExecuteScalar();
+                            featureBody.Id = result?.ToString() ?? string.Empty;
+                        }
+                    }
+                    else
+                    {
+                        using (var cmd = new SqlCommand(sql, Connection, transaction))
+                        {
+                            cmd.ExecuteScalar();
+                        }
                     }
                 }
-                else if (IdType == "AutoGuid" || IdType == "AutoInt" || IdType == "AutoBigInt")
-                {
-                    using (var cmd = new SqlCommand(sql, Connection, transaction))
-                    {
-                        var result = cmd.ExecuteScalar();
-                        featureBody.Id = result?.ToString() ?? string.Empty;
-                    }
-                }
-                else
-                {
-                    using (var cmd = new SqlCommand(sql, Connection, transaction))
-                    {
-                        cmd.ExecuteScalar();
-                    }
-                }
+
+                transaction.Commit();
             }
-
-            transaction.Commit();
+            catch (Exception ex)
+            {
+                _logger?.LogError($"Insert, {ex.Message}");
+                transaction.Rollback();
+            }
         }
 
         public void Update(FeatureList featureList)
         {
-            LogSql(SqlLogEnabled, "");
             LogSql(SqlLogEnabled, "-- UPDATE");
-            LogSql(SqlLogEnabled, "");
 
             var transaction = Connection.BeginTransaction("BeginTransaction");
 
-            foreach (var featureBody in featureList.Bodies)
-            {
-                var values = GetValues(featureBody);
-
-                if (!values.Any())
+            try {
+                foreach (var featureBody in featureList.Bodies)
                 {
-                    //todo log
-                    continue;
+                    var values = GetValues(featureBody);
+
+                    if (!values.Any())
+                    {
+                        _logger?.LogWarning("Update, get no values");
+                        continue;
+                    }
+
+                    var valuesToSet = values.Where(x => x.IsAutoIncrement == null || !((bool) x.IsAutoIncrement));
+                    var valuesSet = string.Join(',', valuesToSet.Select(x => $"{x.Name}={x.Value}"));
+                    string sql;
+
+                    if (IdType == "Number" || IdType == "Incr")
+                    {
+                        sql = $"UPDATE {TableName} SET {valuesSet} WHERE {featureList.IdFieldName}={featureBody.Id} ;";
+                    }
+                    else // String or Guid
+                    {
+                        sql = $"UPDATE {TableName} SET {valuesSet} WHERE {featureList.IdFieldName}='{featureBody.Id}' ;";
+                    }
+
+                    LogSql(SqlLogEnabled, sql);
+
+                    using (var cmd = new SqlCommand(sql, Connection, transaction))
+                    {
+                        cmd.ExecuteNonQuery();
+                    }
                 }
 
-                var valuesToSet = values.Where(x => x.IsAutoIncrement == null || !((bool) x.IsAutoIncrement));
-                var valuesSet = string.Join(',', valuesToSet.Select(x => $"{x.Name}={x.Value}"));
-                string sql;
+                transaction.Commit();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError($"Update, {ex.Message}");
+                transaction.Rollback();
+            }
+        }
+
+        public void Delete(FeatureList featureList)
+        {
+            LogSql(SqlLogEnabled, "-- DELETE");
+
+            var transaction = Connection.BeginTransaction("BeginTransaction");
+
+            try
+            {
+                string idsToDelete;
 
                 if (IdType == "Number" || IdType == "Incr")
                 {
-                    sql = $"UPDATE {TableName} SET {valuesSet} WHERE {featureList.IdFieldName}={featureBody.Id} ;";
+                    idsToDelete = string.Join(',', featureList.Bodies.Select(x => x.Id));
                 }
                 else // String or Guid
                 {
-                    sql = $"UPDATE {TableName} SET {valuesSet} WHERE {featureList.IdFieldName}='{featureBody.Id}' ;";
+                    idsToDelete = string.Join(',', featureList.Bodies.Select(x => $"'{x.Id}'"));
                 }
 
+                var sql = $"DELETE FROM {TableName} WHERE {featureList.IdFieldName} IN ({idsToDelete}) ;";
+
                 LogSql(SqlLogEnabled, sql);
-                //File.WriteAllText(Path.Combine(Path.GetTempPath(),$"SQL UPDATE {Guid.NewGuid()}"), sql);
 
                 using (var cmd = new SqlCommand(sql, Connection, transaction))
                 {
                     cmd.ExecuteNonQuery();
                 }
+
+                transaction.Commit();
             }
-
-            transaction.Commit();
-        }
-
-        public void Delete(FeatureList featureList)
-        {
-            LogSql(SqlLogEnabled, "");
-            LogSql(SqlLogEnabled, "-- DELETE");
-            LogSql(SqlLogEnabled, "");
-
-            var transaction = Connection.BeginTransaction("BeginTransaction");
-            string idsToDelete;
-
-            if (IdType == "Number" || IdType == "Incr")
+            catch (Exception ex)
             {
-                idsToDelete = string.Join(',', featureList.Bodies.Select(x => x.Id));
+                _logger?.LogError($"Delete, {ex.Message}");
+                transaction.Rollback();
             }
-            else // String or Guid
-            {
-                idsToDelete = string.Join(',', featureList.Bodies.Select(x => $"'{x.Id}'"));
-            }
-
-            var sql = $"DELETE FROM {TableName} WHERE {featureList.IdFieldName} IN ({idsToDelete}) ;";
-
-            LogSql(SqlLogEnabled, sql);
-            //File.WriteAllText(Path.Combine(Path.GetTempPath(), $"SQL DELETE {Guid.NewGuid()}"), sql);
-
-            using (var cmd = new SqlCommand(sql, Connection, transaction))
-            {
-                cmd.ExecuteNonQuery();
-            }
-
-            transaction.Commit();
         }
 
         private List<DbField> GetFields()
