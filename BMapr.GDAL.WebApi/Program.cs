@@ -3,7 +3,6 @@ using BMapr.GDAL.WebApi.Authentication.Base;
 using BMapr.GDAL.WebApi.Models.Job;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.OpenApi.Models;
 using OSGeo.GDAL;
 using OSGeo.MapServer;
 using OSGeo.OGR;
@@ -13,6 +12,7 @@ using Serilog;
 using System.Diagnostics;
 using System.Net;
 using System.Reflection;
+using Microsoft.OpenApi;
 
 /**********************************************************************************
  * Builder
