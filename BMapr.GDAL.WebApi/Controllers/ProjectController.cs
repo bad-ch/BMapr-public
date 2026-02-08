@@ -299,6 +299,59 @@ namespace BMapr.GDAL.WebApi.Controllers
         }
 
         /// <summary>
+        /// Get mapfile as JSON file (read/write)
+        /// </summary>
+        /// <param name="project">Guid from project</param>
+        /// <param name="token">Access token</param>
+        /// <returns>Mapfile as JSON</returns>
+        [HttpGet("GetMapFileData/{project}")]
+        public ActionResult GetMapFileData(string project, [FromQuery(Name = "token")] string? token)
+        {
+            var projectSettings = ProjectSettingsService.Get(project, Config);
+
+            if (!TokenService.Check(Request, IConfig, projectSettings, token))
+            {
+                return BadRequest("User or system token invalid");
+            }
+
+            Config.Host = HostService.Get(Request, IConfig);
+
+            var mapFiles = Config.DataProject(project).GetFiles("*.map", SearchOption.AllDirectories);
+
+            if (mapFiles.Length > 0)
+            {
+                var mapFile = mapFiles[0].FullName;
+                var mapContent = System.IO.File.ReadAllText(mapFile);
+                var map = BMapr.GDAL.WebApi.Services.MapObj.Parse(mapContent);
+
+                DefaultContractResolver contractResolver = new DefaultContractResolver
+                {
+                    NamingStrategy = new CamelCaseNamingStrategy()
+                };
+
+                var content = JsonConvert.SerializeObject(
+                    map,
+                    Formatting.None,
+                    new JsonSerializerSettings()
+                    {
+                        ContractResolver = contractResolver,
+                        ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                        TypeNameHandling = TypeNameHandling.Objects,
+                    }
+                );
+
+                return new ContentResult()
+                {
+                    Content = content,
+                    ContentType = "application/json",
+                    StatusCode = 200
+                };
+            }
+
+            return NotFound();
+        }
+
+        /// <summary>
         /// Get legend with encoded images from map
         /// </summary>
         /// <param name="project">Guid from project</param>
