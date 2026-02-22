@@ -77,13 +77,13 @@ namespace BMapr.GDAL.WebApi.Controllers
                 mapserver.AddGeometryToLayer("test", geometry.Wkt, geometry.Label ?? "");
             }
 
-            mapserver.MapserverSetExtent(geometryList.Extent.Xmin, geometryList.Extent.Ymin, geometryList.Extent.Xmax, geometryList.Extent.Ymax, geometryList.Size[0], geometryList.Size[1]);
+            mapserver.SetExtent(geometryList.Extent.Xmin, geometryList.Extent.Ymin, geometryList.Extent.Xmax, geometryList.Extent.Ymax, geometryList.Size[0], geometryList.Size[1]);
 
             mapserver.ApplySldDefinition("test", sldDescription);
 
             //todo error handling
 
-            var imageByteArray = mapserver.MapserverDrawImage(geometryList.MimeType, geometryList.Size[0], geometryList.Size[1]); //take style from layer modified with sld
+            var imageByteArray = mapserver.DrawImage(geometryList.MimeType, geometryList.Size[0], geometryList.Size[1]); //take style from layer modified with sld
 
             return new FileContentResult(imageByteArray, geometryList.MimeType);
         }

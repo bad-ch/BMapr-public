@@ -156,14 +156,14 @@ namespace BMapr.GDAL.WebApi.Services
             var i = layer.applySLD(sldDescription, null);
         }
 
-        public void MapserverSetExtent(double xMin, double yMin, double xMax, double yMax, int width, int height)
+        public void SetExtent(double xMin, double yMin, double xMax, double yMax, int width, int height)
         {
             Map.width = width;   //it is very important that the propertion from the extent and the picture is the same otherwise mapserver change the extent
             Map.height = height; //it is very important that the propertion from the extent and the picture is the same otherwise mapserver change the extent
             Map.setExtent(xMin, yMin, xMax, yMax);
         }
 
-        public byte[] MapserverDrawImage(string mimeType, int width, int height)
+        public byte[] DrawImage(string mimeType, int width, int height)
         {
             outputFormatObj outputFormat = null;
 
