@@ -27,6 +27,7 @@ _cache
 [Bb]uild[Ll]og.*
 
 
+BMapr.Map
 /BMapr.GDAL.WebApi/Data/projects
 /BMapr.GDAL.WebApi/Data/tool/postsave
 /BMapr.GDAL.WebApi.Test

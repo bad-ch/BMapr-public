@@ -64,8 +64,6 @@ namespace BMapr.GDAL.WebApi.Services
         public Mapserver()
         {
             Ini();
-            //GdalConfiguration.ConfigureGdal();
-            //GdalConfiguration.ConfigureOgr();
             Map = new mapObj("");
 
             _debugLevel = 1;
@@ -89,18 +87,12 @@ namespace BMapr.GDAL.WebApi.Services
             }
 
             Ini();
-            //GdalConfiguration.ConfigureGdal();
-            //GdalConfiguration.ConfigureOgr();
-
             Map = new mapObj(mapfile.FullName);
         }
 
         public Mapserver(string mapContent)
         {
             Ini();
-            //GdalConfiguration.ConfigureGdal();
-            //GdalConfiguration.ConfigureOgr();
-
             Map = ConfigService.GetMapObject(mapContent);
         }
 
