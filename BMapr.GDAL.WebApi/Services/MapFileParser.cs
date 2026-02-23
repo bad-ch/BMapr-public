@@ -176,8 +176,6 @@ namespace BMapr.GDAL.WebApi.Services
 
         public int[]? OffsiteColor { get; set; }
         public string? OffsiteHex { get; set; }
-        public int? Opacity { get; set; }
-        public string? OpacityKeyword { get; set; }
 
         public string? TileIndex { get; set; }
         public string? TileItem { get; set; }
@@ -195,6 +193,7 @@ namespace BMapr.GDAL.WebApi.Services
         public Dictionary<string, List<string[]>> Identify { get; } = new(StringComparer.OrdinalIgnoreCase);
 
         public List<FeatureObj> Features { get; } = new(); // FEATURE blocks
+        public CompositeObj? Composite { get; set; }
 
         public Dictionary<string, List<string[]>> Attributes { get; } = new(StringComparer.OrdinalIgnoreCase);
 
@@ -251,9 +250,6 @@ namespace BMapr.GDAL.WebApi.Services
             if (OffsiteColor != null && OffsiteColor.Length == 3) MapfileSerializer.WriteKeyValues(w, indent + 1, "OFFSITE", OffsiteColor.Select(i => i.ToString(CultureInfo.InvariantCulture)).ToArray());
             else if (!string.IsNullOrWhiteSpace(OffsiteHex)) MapfileSerializer.WriteKeyValues(w, indent + 1, "OFFSITE", MapfileSerializer.Quote(OffsiteHex!));
 
-            if (Opacity.HasValue) MapfileSerializer.WriteKeyValues(w, indent + 1, "OPACITY", Opacity.Value.ToString(CultureInfo.InvariantCulture));
-            else if (!string.IsNullOrWhiteSpace(OpacityKeyword)) MapfileSerializer.WriteKeyValues(w, indent + 1, "OPACITY", OpacityKeyword!);
-
             if (!string.IsNullOrWhiteSpace(TileIndex)) MapfileSerializer.WriteKeyValues(w, indent + 1, "TILEINDEX", MapfileSerializer.Quote(TileIndex!));
             if (!string.IsNullOrWhiteSpace(TileItem)) MapfileSerializer.WriteKeyValues(w, indent + 1, "TILEITEM", MapfileSerializer.Quote(TileItem!));
             if (!string.IsNullOrWhiteSpace(TileFilter)) MapfileSerializer.WriteKeyValues(w, indent + 1, "TILEFILTER", MapfileSerializer.Quote(TileFilter!));
@@ -267,6 +263,8 @@ namespace BMapr.GDAL.WebApi.Services
             if (Identify.Count > 0) { MapfileSerializer.WriteIndent(w, indent + 1); w.WriteLine("IDENTIFY"); MapfileSerializer.WriteAttributes(w, indent + 1, Identify); MapfileSerializer.WriteIndent(w, indent + 1); w.WriteLine("END"); }
 
             foreach (var j in Joins) j.Write(w, indent + 1);
+
+            if (Composite != null) Composite.Write(w, indent + 1);
 
             if (Metadata.Count > 0) { MapfileSerializer.WriteIndent(w, indent + 1); w.WriteLine("METADATA"); foreach (var kv in Metadata) { MapfileSerializer.WriteIndent(w, indent + 2); w.WriteLine($"{MapfileSerializer.Quote(kv.Key)} {MapfileSerializer.Quote(kv.Value)}"); } MapfileSerializer.WriteIndent(w, indent + 1); w.WriteLine("END"); }
 
@@ -292,6 +290,35 @@ namespace BMapr.GDAL.WebApi.Services
         public string? Template { get; set; }
         public Dictionary<string, List<string[]>> Attributes { get; } = new(StringComparer.OrdinalIgnoreCase);
         public void Write(TextWriter w, int indent) { MapfileSerializer.WriteIndent(w, indent); w.WriteLine("JOIN"); if (!string.IsNullOrWhiteSpace(Name)) MapfileSerializer.WriteKeyValues(w, indent + 1, "NAME", MapfileSerializer.Quote(Name!)); if (!string.IsNullOrWhiteSpace(Table)) MapfileSerializer.WriteKeyValues(w, indent + 1, "TABLE", MapfileSerializer.Quote(Table!)); if (!string.IsNullOrWhiteSpace(From)) MapfileSerializer.WriteKeyValues(w, indent + 1, "FROM", MapfileSerializer.Quote(From!)); if (!string.IsNullOrWhiteSpace(To)) MapfileSerializer.WriteKeyValues(w, indent + 1, "TO", MapfileSerializer.Quote(To!)); if (!string.IsNullOrWhiteSpace(Type)) MapfileSerializer.WriteKeyValues(w, indent + 1, "TYPE", Type!); if (!string.IsNullOrWhiteSpace(Template)) MapfileSerializer.WriteKeyValues(w, indent + 1, "TEMPLATE", MapfileSerializer.Quote(Template!)); MapfileSerializer.WriteAttributes(w, indent + 1, Attributes); MapfileSerializer.WriteIndent(w, indent); w.WriteLine("END"); }
+    }
+
+    public class CompositeObj
+    {
+        public int? Opacity { get; set; }
+        public string? CompOp { get; set; }
+        public List<double> Pattern { get; } = new();
+        public Dictionary<string, List<string[]>> Attributes { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        public void Write(TextWriter w, int indent)
+        {
+            MapfileSerializer.WriteIndent(w, indent); w.WriteLine("COMPOSITE");
+            if (Opacity.HasValue) MapfileSerializer.WriteKeyValues(w, indent + 1, "OPACITY", Opacity.Value.ToString(CultureInfo.InvariantCulture));
+            if (!string.IsNullOrWhiteSpace(CompOp)) MapfileSerializer.WriteKeyValues(w, indent + 1, "COMPOP", CompOp!);
+            if (Pattern.Count > 0)
+            {
+                MapfileSerializer.WriteKeyValues(w, indent + 1, "PATTERN");
+                MapfileSerializer.WriteIndent(w, indent + 2);
+                for (int i = 0; i < Pattern.Count; i++)
+                {
+                    if (i > 0) w.Write(' ');
+                    w.Write(Pattern[i].ToString(CultureInfo.InvariantCulture));
+                }
+                w.WriteLine();
+                MapfileSerializer.WriteIndent(w, indent + 1); w.WriteLine("END");
+            }
+            MapfileSerializer.WriteAttributes(w, indent + 1, Attributes);
+            MapfileSerializer.WriteIndent(w, indent); w.WriteLine("END");
+        }
     }
 
     // ===== FEATURE =====
@@ -612,7 +639,7 @@ namespace BMapr.GDAL.WebApi.Services
 
     internal static class MapfileParser
     {
-        private enum CtxType { Map, Web, Metadata, Projection, OutputFormat, Layer, Class, Style, Label, Leader, Validation, Join, Identify }
+        private enum CtxType { Map, Web, Metadata, Projection, OutputFormat, Layer, Class, Style, Label, Leader, Validation, Join, Identify, Composite }
         private sealed class Context { public CtxType Type { get; } public object Node { get; } public Context(CtxType t, object n) { Type = t; Node = n; } }
 
         public static MapObj Parse(string text, string? baseDir)
@@ -751,6 +778,11 @@ namespace BMapr.GDAL.WebApi.Services
                     if (ctx.Type != CtxType.Layer) throw new FormatException($"IDENTIFY outside LAYER at line {lineNo}");
                     stack.Push(new Context(CtxType.Identify, ((LayerObj)ctx.Node).Identify)); continue;
                 }
+                if (head == "COMPOSITE")
+                {
+                    if (ctx.Type != CtxType.Layer) throw new FormatException($"COMPOSITE outside LAYER at line {lineNo}");
+                    var comp = new CompositeObj(); ((LayerObj)ctx.Node).Composite = comp; stack.Push(new Context(CtxType.Composite, comp)); continue;
+                }
 
                 // Content by context
                 switch (ctx.Type)
@@ -768,6 +800,7 @@ namespace BMapr.GDAL.WebApi.Services
                     case CtxType.Map: ApplyKeyValuesToMap((MapObj)ctx.Node, tokens); break;
                     case CtxType.Join: ApplyKeyValuesToJoin((JoinObj)ctx.Node, tokens); break;
                     case CtxType.Identify: AddToAttributes((Dictionary<string, List<string[]>>)ctx.Node, tokens); break;
+                    case CtxType.Composite: ApplyKeyValuesToComposite((CompositeObj)ctx.Node, tokens); break;
                     default: throw new NotSupportedException($"Unhandled context at line {lineNo}");
                 }
             }
@@ -875,7 +908,6 @@ namespace BMapr.GDAL.WebApi.Services
                 case "FOOTER": layer.Footer = Unquote(joined); break;
                 case "TEMPLATE": layer.Template = Unquote(joined); break;
                 case "OFFSITE": if (vals.Count >= 1 && vals[0].StartsWith("#")) layer.OffsiteHex = Unquote(vals[0]); else if (vals.Count >= 3) layer.OffsiteColor = ParseInts(vals, 3); else AddToAttributes(layer.Attributes, tokens); break;
-                case "OPACITY": if (vals.Count == 1 && int.TryParse(vals[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var op)) layer.Opacity = op; else layer.OpacityKeyword = joined.ToUpperInvariant(); break;
                 case "TILEINDEX": layer.TileIndex = Unquote(joined); break;
                 case "TILEITEM": layer.TileItem = Unquote(joined); break;
                 case "TILEFILTER": layer.TileFilter = Unquote(joined); break;
@@ -1025,6 +1057,20 @@ namespace BMapr.GDAL.WebApi.Services
                 case "TYPE": j.Type = joined.ToUpperInvariant(); break;
                 case "TEMPLATE": j.Template = Unquote(joined); break;
                 default: if (!j.Attributes.TryGetValue(key, out var list)) { list = new List<string[]>(); j.Attributes[key] = list; } list.Add(tokens.Skip(1).Select(Unquote).ToArray()); break;
+            }
+        }
+
+        private static void ApplyKeyValuesToComposite(CompositeObj comp, List<string> tokens)
+        {
+            var key = tokens[0].ToUpperInvariant(); var vals = tokens.Skip(1).ToList(); var joined = string.Join(" ", vals);
+            switch (key)
+            {
+                case "OPACITY": comp.Opacity = (int)ParseDouble(vals); break;
+                case "COMPOP": comp.CompOp = joined; break;
+                case "PATTERN": // Read numbers on the same line if present
+                    foreach (var v in vals) { if (double.TryParse(v, NumberStyles.Float, CultureInfo.InvariantCulture, out var d)) comp.Pattern.Add(d); }
+                    break;
+                default: AddToAttributes(comp.Attributes, tokens); break;
             }
         }
 

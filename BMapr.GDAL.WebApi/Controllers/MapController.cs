@@ -26,8 +26,10 @@ public class MapController : DefaultController
     [HttpGet("{project}")]
     [HttpHead("{project}")]
     [EnableCors("AllowAnyOrigin")]
-    public ActionResult GetImageFromMap(string project, [FromQuery] double xmin, [FromQuery] double ymin, [FromQuery] double xmax, [FromQuery] double ymax, [FromQuery] int width, [FromQuery] int height, [FromQuery] string format, [FromQuery] int epsg, [FromQuery] string layers)
+    public ActionResult GetImageFromMap(string project, [FromQuery] double xmin, [FromQuery] double ymin, [FromQuery] double xmax, [FromQuery] double ymax, [FromQuery] int width, [FromQuery] int height, [FromQuery] string format, [FromQuery] string epsg, [FromQuery] string layers)
     {
+        //todo handle epsg code
+
         Config.Host = HostService.Get(Request, IConfig);
 
         var mapMetadata = MapFileService.GetMapFromProject(project, Config);
