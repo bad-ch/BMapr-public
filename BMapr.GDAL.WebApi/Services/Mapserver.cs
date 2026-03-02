@@ -311,9 +311,9 @@ namespace BMapr.GDAL.WebApi.Services
             return true;
         }
 
-        public Dictionary<string,Image> GetLegendAsImages(int width, int height, bool allLayer = true)
+        public List<(string key, string classname,Image image)> GetLegendAsImages(int width, int height, bool allLayer = true)
         {
-            var legends = new Dictionary<string, Image>();
+            var legends = new List<(string key, string classname, Image image)>();
 
             for (int i = 0; i < Map.numlayers; i++)
             {
@@ -324,17 +324,17 @@ namespace BMapr.GDAL.WebApi.Services
                     continue;
                 }
 
-                var layerName = string.IsNullOrEmpty(layer.name) ? i.ToString() : layer.name;
+                var layername = string.IsNullOrEmpty(layer.name) ? i.ToString() : layer.name;
 
                 for (int j = 0; j < layer.numclasses; j++)
                 {
                     var classObj = layer.getClass(j);
                     var classname = string.IsNullOrEmpty(classObj.name) ? j.ToString() : classObj.name;
                     var image = classObj.createLegendIcon(Map, layer, width, height);
-                    var legendLabel = $"{layerName}, {classname}";
+                    var legendLabel = $"{layername}, {classname}";
 
                     var memoryStream = new MemoryStream(image.getBytes());
-                    legends.Add(legendLabel, Image.FromStream(memoryStream));
+                    legends.Add((layername,classname, Image.FromStream(memoryStream)));
                 }
             }
 

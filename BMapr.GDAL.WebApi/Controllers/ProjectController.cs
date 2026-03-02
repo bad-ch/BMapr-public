@@ -379,7 +379,7 @@ namespace BMapr.GDAL.WebApi.Controllers
             var mapPath = MapFileService.GetMapPathFromCache( mapMetadata.Value.Key, mapMetadata.Value.FilePath, Config, project) ?? string.Empty;
             var mapServer = new Mapserver(new FileInfo(mapPath));
             var legendItems = mapServer.GetLegendAsImages(180, 90, true);
-            var legends = legendItems.Select( x => new {label = x.Key, content = ImageService.GetBase64StringFromImage(x.Value, ImageFormat.Png)});
+            var legends = legendItems.Select( x => new {key = x.key, classname = x.classname,image = ImageService.GetBase64StringFromImage(x.image, ImageFormat.Png)});
 
             var contractResolver = new DefaultContractResolver
             {
