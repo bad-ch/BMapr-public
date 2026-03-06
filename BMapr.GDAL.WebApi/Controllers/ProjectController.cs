@@ -204,6 +204,41 @@ namespace BMapr.GDAL.WebApi.Controllers
         }
 
         /// <summary>
+        /// Get projects
+        /// </summary>
+        /// <returns>List of projects items</returns>
+        [HttpGet("getProjects")]
+        public ActionResult<List<ProjectItem>> GetProjects([FromQuery(Name = "token")] string? token)
+        {
+            var dataProjects = Config.DataProjects;
+            var projectItems = new List<ProjectItem>();
+
+            dataProjects!.GetDirectories().ToList().ForEach(x =>
+            {
+                var project = x.Name;
+                var projectSettings = ProjectSettingsService.Get(project, Config);
+
+                if (!TokenService.Check(Request, IConfig, projectSettings, token))
+                {
+                    return;
+                }
+
+                var mapFiles = Config.DataProject(project).GetFiles("*.map", SearchOption.AllDirectories);
+                var mapFile = mapFiles[0].FullName;
+                var mapContent = System.IO.File.ReadAllText(mapFile);
+                var map = BMapr.GDAL.WebApi.Services.MapObj.Parse(mapContent);
+
+                projectItems.Add(new ProjectItem()
+                {
+                    Id = project,
+                    Name = map.Name ?? project
+                });
+            });
+
+            return Ok(projectItems);
+        }
+
+        /// <summary>
         /// Get file from project
         /// </summary>
         /// <param name="project">Guid from project</param>
