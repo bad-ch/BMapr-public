@@ -224,15 +224,41 @@ namespace BMapr.GDAL.WebApi.Controllers
                 }
 
                 var mapFiles = Config.DataProject(project).GetFiles("*.map", SearchOption.AllDirectories);
+
+                if (mapFiles.Length == 0)
+                {
+                    return;
+                }
+
                 var mapFile = mapFiles[0].FullName;
                 var mapContent = System.IO.File.ReadAllText(mapFile);
-                var map = BMapr.GDAL.WebApi.Services.MapObj.Parse(mapContent);
 
-                projectItems.Add(new ProjectItem()
+                var projectItem = new ProjectItem()
                 {
                     Id = project,
-                    Name = map.Name ?? project
-                });
+                    Name = project
+                };
+
+
+                try
+                {
+                    var map = BMapr.GDAL.WebApi.Services.MapObj.Parse(mapContent);
+
+                    if (map.Name != null)
+                    {
+                        projectItem.Name = map.Name;
+                    }
+
+                    projectItem.ParseMapfile = true;
+                    projectItem.Extent = map.Extent ?? [];
+                }
+                catch (Exception ex)
+                {
+                   _logger.LogError($"Error parse mapfile {mapFile}, project {project}", ex);
+                }
+
+                projectItems.Add(projectItem);
+
             });
 
             return Ok(projectItems);
