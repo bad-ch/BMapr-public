@@ -26,8 +26,10 @@ public class MapController : DefaultController
     [HttpGet("{project}")]
     [HttpHead("{project}")]
     [EnableCors("AllowAnyOrigin")]
-    public ActionResult GetImageFromMap(string project, [FromQuery] double xmin, [FromQuery] double ymin, [FromQuery] double xmax, [FromQuery] double ymax, [FromQuery] int width, [FromQuery] int height, [FromQuery] string format, [FromQuery] string epsg, [FromQuery] string layers)
+    public IActionResult GetImageFromMap(string project, [FromQuery] double xmin, [FromQuery] double ymin, [FromQuery] double xmax, [FromQuery] double ymax, [FromQuery] int width, [FromQuery] int height, [FromQuery] string format, [FromQuery] string epsg, [FromQuery] string layers, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         //todo handle epsg code
 
         Config.Host = HostService.Get(Request, IConfig);
@@ -38,6 +40,8 @@ public class MapController : DefaultController
         {
             return new BadRequestResult();
         }
+
+        cancellationToken.ThrowIfCancellationRequested();
 
         var resultMapConfig = MapFileService.GetMapConfigFromCache(mapMetadata.Value.Key, mapMetadata.Value.FilePath, Config, project);
 
@@ -57,9 +61,11 @@ public class MapController : DefaultController
 
         mapServer.SetExtent(xmin, ymin, xmax, ymax, width, height);
 
+        cancellationToken.ThrowIfCancellationRequested();
+
         //mapserver.SetLayerByName("sections", false);
 
-        var imageBlueFeature = mapServer.DrawImage(format, width, height);
+        var imageBlueFeature = mapServer.DrawImage(format, width, height, cancellationToken);
 
         return new FileContentResult(imageBlueFeature, format);
     }

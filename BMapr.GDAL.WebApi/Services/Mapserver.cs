@@ -1,5 +1,6 @@
 ﻿using OSGeo.MapServer;
 using System.Drawing;
+using System.Threading;
 
 namespace BMapr.GDAL.WebApi.Services
 {
@@ -163,7 +164,7 @@ namespace BMapr.GDAL.WebApi.Services
             Map.setExtent(xMin, yMin, xMax, yMax);
         }
 
-        public byte[] DrawImage(string mimeType, int width, int height)
+        public byte[] DrawImage(string mimeType, int width, int height, CancellationToken cancellationToken = default)
         {
             outputFormatObj outputFormat = null;
 
@@ -195,6 +196,8 @@ namespace BMapr.GDAL.WebApi.Services
             }
 
             Map.setOutputFormat(outputFormat);
+
+            cancellationToken.ThrowIfCancellationRequested();
 
             imageObj imageObj;
 
