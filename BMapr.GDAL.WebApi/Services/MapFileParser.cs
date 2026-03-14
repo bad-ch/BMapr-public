@@ -31,6 +31,7 @@ namespace BMapr.GDAL.WebApi.Services
         public List<KeyValuePair<string, string>> Config { get; } = new();
 
         public List<string> Projection { get; } = new();
+        public List<SymbolObj> Symbols { get; } = new();
         public WebObj Web { get; set; } = new WebObj();
         public List<OutputFormatObj> OutputFormats { get; } = new();
         public List<LayerObj> Layers { get; } = new();
@@ -82,6 +83,7 @@ namespace BMapr.GDAL.WebApi.Services
             MapfileSerializer.WriteAttributes(w, 1, Attributes);
 
             if (Projection.Count > 0) { MapfileSerializer.WriteIndent(w, 1); w.WriteLine("PROJECTION"); foreach (var l in Projection) { MapfileSerializer.WriteIndent(w, 2); w.WriteLine(MapfileSerializer.Quote(l)); } MapfileSerializer.WriteIndent(w, 1); w.WriteLine("END"); }
+            foreach (var symbol in Symbols) symbol.Write(w, 1);
             if (!Web.IsEmpty) Web.Write(w, 1);
             foreach (var of in OutputFormats) of.Write(w, 1);
             foreach (var layer in Layers) layer.Write(w, 1);
@@ -121,6 +123,49 @@ namespace BMapr.GDAL.WebApi.Services
             if (!string.IsNullOrWhiteSpace(Extension)) MapfileSerializer.WriteKeyValues(w, indent + 1, "EXTENSION", MapfileSerializer.MaybeQuote(Extension!));
             if (!string.IsNullOrWhiteSpace(ImageMode)) MapfileSerializer.WriteKeyValues(w, indent + 1, "IMAGEMODE", ImageMode!);
             if (!string.IsNullOrWhiteSpace(Transparent)) MapfileSerializer.WriteKeyValues(w, indent + 1, "TRANSPARENT", Transparent!);
+            MapfileSerializer.WriteAttributes(w, indent + 1, Attributes);
+            MapfileSerializer.WriteIndent(w, indent); w.WriteLine("END");
+        }
+    }
+
+    public class SymbolObj
+    {
+        public string? Name { get; set; }
+        public string? Type { get; set; }
+        public string? Image { get; set; }
+        public string? Font { get; set; }
+        public string? Character { get; set; }
+        public double[]? Points { get; set; }
+        public int? Gap { get; set; }
+        public int? LineWidth { get; set; }
+        public string? Filled { get; set; }
+        public string? AnchorPoint { get; set; }
+        public Dictionary<string, List<string[]>> Attributes { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        public void Write(TextWriter w, int indent)
+        {
+            MapfileSerializer.WriteIndent(w, indent); w.WriteLine("SYMBOL");
+            if (!string.IsNullOrWhiteSpace(Name)) MapfileSerializer.WriteKeyValues(w, indent + 1, "NAME", MapfileSerializer.Quote(Name!));
+            if (!string.IsNullOrWhiteSpace(Type)) MapfileSerializer.WriteKeyValues(w, indent + 1, "TYPE", Type!);
+            if (!string.IsNullOrWhiteSpace(Image)) MapfileSerializer.WriteKeyValues(w, indent + 1, "IMAGE", MapfileSerializer.Quote(Image!));
+            if (!string.IsNullOrWhiteSpace(Font)) MapfileSerializer.WriteKeyValues(w, indent + 1, "FONT", MapfileSerializer.Quote(Font!));
+            if (!string.IsNullOrWhiteSpace(Character)) MapfileSerializer.WriteKeyValues(w, indent + 1, "CHARACTER", MapfileSerializer.Quote(Character!));
+            if (Points != null && Points.Length > 0)
+            {
+                MapfileSerializer.WriteKeyValues(w, indent + 1, "POINTS");
+                MapfileSerializer.WriteIndent(w, indent + 2);
+                for (int i = 0; i < Points.Length; i++)
+                {
+                    if (i > 0) w.Write(' ');
+                    w.Write(Points[i].ToString(CultureInfo.InvariantCulture));
+                }
+                w.WriteLine();
+                MapfileSerializer.WriteIndent(w, indent + 1); w.WriteLine("END");
+            }
+            if (Gap.HasValue) MapfileSerializer.WriteKeyValues(w, indent + 1, "GAP", Gap.Value.ToString(CultureInfo.InvariantCulture));
+            if (LineWidth.HasValue) MapfileSerializer.WriteKeyValues(w, indent + 1, "LINEWIDTH", LineWidth.Value.ToString(CultureInfo.InvariantCulture));
+            if (!string.IsNullOrWhiteSpace(Filled)) MapfileSerializer.WriteKeyValues(w, indent + 1, "FILLED", Filled!);
+            if (!string.IsNullOrWhiteSpace(AnchorPoint)) MapfileSerializer.WriteKeyValues(w, indent + 1, "ANCHORPOINT", AnchorPoint!);
             MapfileSerializer.WriteAttributes(w, indent + 1, Attributes);
             MapfileSerializer.WriteIndent(w, indent); w.WriteLine("END");
         }
@@ -183,6 +228,7 @@ namespace BMapr.GDAL.WebApi.Services
         public string? TileFilterItem { get; set; }
 
         public List<string> Projection { get; } = new();
+        public List<SymbolObj> Symbols { get; } = new();
         public Dictionary<string, string> Metadata { get; } = new(StringComparer.OrdinalIgnoreCase);
         public List<ClassObj> Classes { get; } = new();
         public List<JoinObj> Joins { get; } = new();
@@ -270,6 +316,8 @@ namespace BMapr.GDAL.WebApi.Services
 
             // FEATURE blocks (if any)
             foreach (var f in Features) f.Write(w, indent + 1);
+
+            foreach (var symbol in Symbols) symbol.Write(w, indent + 1);
 
             foreach (var c in Classes) c.Write(w, indent + 1);
 
@@ -639,7 +687,7 @@ namespace BMapr.GDAL.WebApi.Services
 
     internal static class MapfileParser
     {
-        private enum CtxType { Map, Web, Metadata, Projection, OutputFormat, Layer, Class, Style, Label, Leader, Validation, Join, Identify, Composite }
+        private enum CtxType { Map, Web, Metadata, Projection, OutputFormat, Layer, Class, Style, Label, Leader, Validation, Join, Identify, Composite, Symbol }
         private sealed class Context { public CtxType Type { get; } public object Node { get; } public Context(CtxType t, object n) { Type = t; Node = n; } }
 
         public static MapObj Parse(string text, string? baseDir)
@@ -715,6 +763,61 @@ namespace BMapr.GDAL.WebApi.Services
                     continue;
                 }
 
+                // Special handling: POINTS blocks inside SYMBOL
+                if (head == "POINTS")
+                {
+                    var ctxSym = stack.Peek();
+                    if (ctxSym.Type != CtxType.Symbol)
+                    {
+                        // Not in a SYMBOL context, treat as regular key-value
+                        ApplyKeyValuesToSymbol((SymbolObj)ctxSym.Node, tokens);
+                        continue;
+                    }
+
+                    var sym = (SymbolObj)ctxSym.Node;
+                    var pointsList = new List<double>();
+
+                    // Collect numbers from the current line if any follow POINTS
+                    foreach (var v in tokens.Skip(1))
+                    {
+                        if (v.ToUpperInvariant() == "END") break;
+                        if (double.TryParse(v, NumberStyles.Float, CultureInfo.InvariantCulture, out var d))
+                            pointsList.Add(d);
+                    }
+
+                    // If no END on this line, read more lines until END
+                    if (!tokens.Skip(1).Any(t => t.ToUpperInvariant() == "END"))
+                    {
+                        bool foundPointsEnd = false;
+                        while ((raw = sr.ReadLine()) != null)
+                        {
+                            lineNo++;
+                            var innerStripped = StripComments(raw);
+                            var innerTokens = Tokenize(innerStripped);
+                            if (innerTokens.Count > 0)
+                            {
+                                var innerHead = innerTokens[0].ToUpperInvariant();
+                                if (innerHead == "END")
+                                {
+                                    foundPointsEnd = true;
+                                    break;
+                                }
+                                foreach (var v in innerTokens)
+                                {
+                                    if (double.TryParse(v, NumberStyles.Float, CultureInfo.InvariantCulture, out var d))
+                                        pointsList.Add(d);
+                                }
+                            }
+                        }
+                        if (!foundPointsEnd)
+                            throw new FormatException($"POINTS block at line {lineNo} is missing closing END");
+                    }
+
+                    if (pointsList.Count > 0)
+                        sym.Points = pointsList.ToArray();
+                    continue;
+                }
+
                 if (head == "END") { if (stack.Count == 0) throw new FormatException($"Unexpected END at line {lineNo}"); stack.Pop(); continue; }
 
                 if (stack.Count == 0) continue; // Allow final END to pop MAP context
@@ -749,6 +852,12 @@ namespace BMapr.GDAL.WebApi.Services
                     throw new FormatException($"PROJECTION not allowed here (line {lineNo})");
                 }
                 if (head == "OUTPUTFORMAT") { var of = new OutputFormatObj(); ((MapObj)ctx.Node).OutputFormats.Add(of); stack.Push(new Context(CtxType.OutputFormat, of)); continue; }
+                if (head == "SYMBOL")
+                {
+                    if (ctx.Type == CtxType.Map) { var sym = new SymbolObj(); ((MapObj)ctx.Node).Symbols.Add(sym); stack.Push(new Context(CtxType.Symbol, sym)); continue; }
+                    if (ctx.Type == CtxType.Layer) { var sym = new SymbolObj(); ((LayerObj)ctx.Node).Symbols.Add(sym); stack.Push(new Context(CtxType.Symbol, sym)); continue; }
+                    throw new FormatException($"SYMBOL not allowed here (line {lineNo})");
+                }
                 if (head == "LAYER") { var layer = new LayerObj(); ((MapObj)ctx.Node).Layers.Add(layer); stack.Push(new Context(CtxType.Layer, layer)); continue; }
                 if (head == "CLASS") { if (ctx.Type != CtxType.Layer) throw new FormatException($"CLASS outside LAYER at line {lineNo}"); var c = new ClassObj(); ((LayerObj)ctx.Node).Classes.Add(c); stack.Push(new Context(CtxType.Class, c)); continue; }
                 if (head == "STYLE")
@@ -790,19 +899,20 @@ namespace BMapr.GDAL.WebApi.Services
                     case CtxType.Metadata: ParseMetadataLine((Dictionary<string, string>)ctx.Node, tokens, lineNo); break;
                     case CtxType.Validation: ParseValidationLine((Dictionary<string, string>)ctx.Node, tokens, lineNo); break;
                     case CtxType.Projection: ParseProjectionLine((List<string>)ctx.Node, tokens); break;
-                    case CtxType.OutputFormat: ApplyKeyValuesToOutputFormat((OutputFormatObj)ctx.Node, tokens); break;
-                    case CtxType.Web: AddToAttributes(((WebObj)ctx.Node).Attributes, tokens); break;
-                    case CtxType.Layer: ApplyKeyValuesToLayer((LayerObj)ctx.Node, tokens); break;
-                    case CtxType.Class: ApplyKeyValuesToClass((ClassObj)ctx.Node, tokens); break;
-                    case CtxType.Style: ApplyKeyValuesToStyle((StyleObj)ctx.Node, tokens); break;
-                    case CtxType.Label: ApplyKeyValuesToLabel((LabelObj)ctx.Node, tokens); break;
-                    case CtxType.Leader: ApplyKeyValuesToLeader((LeaderObj)ctx.Node, tokens); break;
-                    case CtxType.Map: ApplyKeyValuesToMap((MapObj)ctx.Node, tokens); break;
-                    case CtxType.Join: ApplyKeyValuesToJoin((JoinObj)ctx.Node, tokens); break;
-                    case CtxType.Identify: AddToAttributes((Dictionary<string, List<string[]>>)ctx.Node, tokens); break;
-                    case CtxType.Composite: ApplyKeyValuesToComposite((CompositeObj)ctx.Node, tokens); break;
-                    default: throw new NotSupportedException($"Unhandled context at line {lineNo}");
-                }
+                        case CtxType.OutputFormat: ApplyKeyValuesToOutputFormat((OutputFormatObj)ctx.Node, tokens); break;
+                        case CtxType.Symbol: ApplyKeyValuesToSymbol((SymbolObj)ctx.Node, tokens); break;
+                        case CtxType.Web: AddToAttributes(((WebObj)ctx.Node).Attributes, tokens); break;
+                        case CtxType.Layer: ApplyKeyValuesToLayer((LayerObj)ctx.Node, tokens); break;
+                        case CtxType.Class: ApplyKeyValuesToClass((ClassObj)ctx.Node, tokens); break;
+                        case CtxType.Style: ApplyKeyValuesToStyle((StyleObj)ctx.Node, tokens); break;
+                        case CtxType.Label: ApplyKeyValuesToLabel((LabelObj)ctx.Node, tokens); break;
+                        case CtxType.Leader: ApplyKeyValuesToLeader((LeaderObj)ctx.Node, tokens); break;
+                        case CtxType.Map: ApplyKeyValuesToMap((MapObj)ctx.Node, tokens); break;
+                        case CtxType.Join: ApplyKeyValuesToJoin((JoinObj)ctx.Node, tokens); break;
+                        case CtxType.Identify: AddToAttributes((Dictionary<string, List<string[]>>)ctx.Node, tokens); break;
+                        case CtxType.Composite: ApplyKeyValuesToComposite((CompositeObj)ctx.Node, tokens); break;
+                        default: throw new NotSupportedException($"Unhandled context at line {lineNo}");
+                    }
             }
 
             if (stack.Count != 0) throw new FormatException("Unbalanced blocks: missing END(s)");
@@ -1042,6 +1152,25 @@ namespace BMapr.GDAL.WebApi.Services
                 case "IMAGEMODE": of.ImageMode = joined.ToUpperInvariant(); break;
                 case "TRANSPARENT": of.Transparent = joined.ToUpperInvariant(); break;
                 default: AddToAttributes(of.Attributes, tokens); break;
+            }
+        }
+
+        private static void ApplyKeyValuesToSymbol(SymbolObj sym, List<string> tokens)
+        {
+            var key = tokens[0].ToUpperInvariant(); var vals = tokens.Skip(1).ToList(); var joined = string.Join(" ", vals);
+            switch (key)
+            {
+                case "NAME": sym.Name = Unquote(joined); break;
+                case "TYPE": sym.Type = joined.ToUpperInvariant(); break;
+                case "IMAGE": sym.Image = Unquote(joined); break;
+                case "FONT": sym.Font = Unquote(joined); break;
+                case "CHARACTER": sym.Character = Unquote(joined); break;
+                case "POINTS": break; // Handled specially in the main parser loop
+                case "GAP": sym.Gap = (int)ParseDouble(vals); break;
+                case "LINEWIDTH": sym.LineWidth = (int)ParseDouble(vals); break;
+                case "FILLED": sym.Filled = joined.ToUpperInvariant(); break;
+                case "ANCHORPOINT": sym.AnchorPoint = joined; break;
+                default: AddToAttributes(sym.Attributes, tokens); break;
             }
         }
 

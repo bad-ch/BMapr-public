@@ -1,0 +1,117 @@
+/**
+ * Example: Inline Symbol Support in MapServer Mapfiles
+ * 
+ * This example demonstrates the new inline symbol functionality that has been added
+ * to the MapFile parser. Previously, symbols had to be defined in external symbol files.
+ * Now they can be defined inline within MAP and LAYER blocks.
+ */
+
+MAP
+  NAME "WebGIS"
+  STATUS ON
+  SIZE 800 600
+  EXTENT -180 -90 180 90
+  UNITS DEGREES
+
+  # Define a map-level symbol
+  SYMBOL
+    NAME "circle_marker"
+    TYPE ELLIPSE
+    POINTS
+      1 1
+    END
+    FILLED TRUE
+  END
+
+  # Define another map-level symbol for routing
+  SYMBOL
+    NAME "route_arrow"
+    TYPE VECTOR
+    POINTS
+      0 0
+      10 5
+      5 5
+      5 10
+      5 5
+      0 5
+    END
+    FILLED OFF
+  END
+
+  # Layer for cities with inline symbol
+  LAYER
+    NAME "cities"
+    TYPE POINT
+    STATUS ON
+
+    # Inline layer-specific symbol
+    SYMBOL
+      NAME "city_dot"
+      TYPE PIXMAP
+      IMAGE "icons/city.png"
+    END
+
+    CLASS
+      STYLE
+        SYMBOL "city_marker"
+        COLOR 255 0 0
+        SIZE 8
+      END
+    END
+  END
+
+  # Layer for roads with custom marker symbols
+  LAYER
+    NAME "roads"
+    TYPE LINE
+    STATUS ON
+
+    # Define route direction markers inline
+    SYMBOL
+      NAME "north_arrow"
+      TYPE TRUETYPE
+      FONT "Arial"
+      CHARACTER "↑"
+    END
+
+    SYMBOL
+      NAME "south_arrow"
+      TYPE TRUETYPE
+      FONT "Arial"
+      CHARACTER "↓"
+    END
+
+    CLASS
+      STYLE
+        COLOR 128 128 255
+        WIDTH 2
+      END
+    END
+  END
+
+  # Layer for polygon features with fill pattern
+  LAYER
+    NAME "regions"
+    TYPE POLYGON
+    STATUS ON
+
+    # Define a cross-hatch pattern as a vector symbol
+    SYMBOL
+      NAME "hatch_pattern"
+      TYPE VECTOR
+      POINTS
+        0 0
+        10 10
+      END
+      LINEWIDTH 1
+    END
+
+    CLASS
+      STYLE
+        COLOR 200 255 200
+        OUTLINECOLOR 0 128 0
+      END
+    END
+  END
+
+END
