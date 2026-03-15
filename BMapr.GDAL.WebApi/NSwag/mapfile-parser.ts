@@ -1803,6 +1803,411 @@ export class MapfileSerializer {
   }
 }
 
+// ============================================================================
+// INDIVIDUAL COMPONENT PARSER
+// ============================================================================
+
+export class MapfileComponentParser {
+  /**
+   * Parse a STYLE block from a string
+   * @param text Mapfile text containing STYLE block
+   */
+  public static parseStyle(text: string): Defs.StyleObj {
+    const style: Defs.StyleObj = { pattern: [], attributes: {} };
+    const lines = text.split(/\r?\n/);
+    let inStyle = false;
+
+    for (const line of lines) {
+      const trimmed = MapfileParser['stripComments'](line).trim();
+      if (!trimmed) continue;
+
+      const tokens = MapfileParser['tokenize'](trimmed);
+      if (tokens.length === 0) continue;
+
+      if (!inStyle && tokens[0].toUpperCase() === 'STYLE') {
+        inStyle = true;
+        continue;
+      }
+
+      if (inStyle) {
+        if (tokens[0].toUpperCase() === 'END') break;
+        MapfileParser['applyKeyValuesToStyle'](style, tokens);
+      }
+    }
+
+    return style;
+  }
+
+  /**
+   * Parse a SYMBOL block from a string
+   * @param text Mapfile text containing SYMBOL block
+   */
+  public static parseSymbol(text: string): Defs.SymbolObj {
+    const symbol: Defs.SymbolObj = { attributes: {} };
+    const lines = text.split(/\r?\n/);
+    let inSymbol = false;
+
+    for (const line of lines) {
+      const trimmed = MapfileParser['stripComments'](line).trim();
+      if (!trimmed) continue;
+
+      const tokens = MapfileParser['tokenize'](trimmed);
+      if (tokens.length === 0) continue;
+
+      if (!inSymbol && tokens[0].toUpperCase() === 'SYMBOL') {
+        inSymbol = true;
+        continue;
+      }
+
+      if (inSymbol) {
+        if (tokens[0].toUpperCase() === 'END') break;
+        MapfileParser['applyKeyValuesToSymbol'](symbol, tokens);
+      }
+    }
+
+    return symbol;
+  }
+
+  /**
+   * Parse a CLASS block from a string
+   * @param text Mapfile text containing CLASS block
+   */
+  public static parseClass(text: string): Defs.ClassObj {
+    const cls: Defs.ClassObj = { styles: [], labels: [], metadata: {}, validation: {}, attributes: {} };
+    const lines = text.split(/\r?\n/);
+    let inClass = false;
+    const stack: string[] = [];
+
+    for (const line of lines) {
+      const trimmed = MapfileParser['stripComments'](line).trim();
+      if (!trimmed) continue;
+
+      const tokens = MapfileParser['tokenize'](trimmed);
+      if (tokens.length === 0) continue;
+
+      if (!inClass && tokens[0].toUpperCase() === 'CLASS') {
+        inClass = true;
+        continue;
+      }
+
+      if (inClass) {
+        const head = tokens[0].toUpperCase();
+        if (head === 'STYLE') {
+          const style: Defs.StyleObj = { pattern: [], attributes: {} };
+          cls.styles.push(style);
+          stack.push('STYLE');
+          continue;
+        }
+        if (head === 'LABEL') {
+          const label: Defs.LabelObj = { styles: [], attributes: {} };
+          cls.labels.push(label);
+          stack.push('LABEL');
+          continue;
+        }
+        if (head === 'LEADER') {
+          cls.leader = { styles: [], attributes: {} };
+          stack.push('LEADER');
+          continue;
+        }
+        if (head === 'END') {
+          if (stack.length > 0) {
+            stack.pop();
+          } else {
+            break;
+          }
+          continue;
+        }
+        if (stack.length === 0) {
+          MapfileParser['applyKeyValuesToClass'](cls, tokens);
+        }
+      }
+    }
+
+    return cls;
+  }
+
+  /**
+   * Parse a LAYER block from a string
+   * @param text Mapfile text containing LAYER block
+   */
+  public static parseLayer(text: string): Defs.LayerObj {
+    const layer: Defs.LayerObj = {
+      projection: [],
+      symbols: [],
+      metadata: {},
+      classes: [],
+      joins: [],
+      processing: [],
+      validation: {},
+      connectionOptions: {},
+      identify: {},
+      features: [],
+      attributes: {}
+    };
+    const lines = text.split(/\r?\n/);
+    let inLayer = false;
+
+    for (const line of lines) {
+      const trimmed = MapfileParser['stripComments'](line).trim();
+      if (!trimmed) continue;
+
+      const tokens = MapfileParser['tokenize'](trimmed);
+      if (tokens.length === 0) continue;
+
+      if (!inLayer && tokens[0].toUpperCase() === 'LAYER') {
+        inLayer = true;
+        continue;
+      }
+
+      if (inLayer) {
+        if (tokens[0].toUpperCase() === 'END') break;
+        MapfileParser['applyKeyValuesToLayer'](layer, tokens);
+      }
+    }
+
+    return layer;
+  }
+
+  /**
+   * Parse a LABEL block from a string
+   * @param text Mapfile text containing LABEL block
+   */
+  public static parseLabel(text: string): Defs.LabelObj {
+    const label: Defs.LabelObj = { styles: [], attributes: {} };
+    const lines = text.split(/\r?\n/);
+    let inLabel = false;
+
+    for (const line of lines) {
+      const trimmed = MapfileParser['stripComments'](line).trim();
+      if (!trimmed) continue;
+
+      const tokens = MapfileParser['tokenize'](trimmed);
+      if (tokens.length === 0) continue;
+
+      if (!inLabel && tokens[0].toUpperCase() === 'LABEL') {
+        inLabel = true;
+        continue;
+      }
+
+      if (inLabel) {
+        if (tokens[0].toUpperCase() === 'END') break;
+        MapfileParser['applyKeyValuesToLabel'](label, tokens);
+      }
+    }
+
+    return label;
+  }
+
+  /**
+   * Parse a LEADER block from a string
+   * @param text Mapfile text containing LEADER block
+   */
+  public static parseLeader(text: string): Defs.LeaderObj {
+    const leader: Defs.LeaderObj = { styles: [], attributes: {} };
+    const lines = text.split(/\r?\n/);
+    let inLeader = false;
+
+    for (const line of lines) {
+      const trimmed = MapfileParser['stripComments'](line).trim();
+      if (!trimmed) continue;
+
+      const tokens = MapfileParser['tokenize'](trimmed);
+      if (tokens.length === 0) continue;
+
+      if (!inLeader && tokens[0].toUpperCase() === 'LEADER') {
+        inLeader = true;
+        continue;
+      }
+
+      if (inLeader) {
+        if (tokens[0].toUpperCase() === 'END') break;
+        MapfileParser['applyKeyValuesToLeader'](leader, tokens);
+      }
+    }
+
+    return leader;
+  }
+
+  /**
+   * Parse an OUTPUTFORMAT block from a string
+   * @param text Mapfile text containing OUTPUTFORMAT block
+   */
+  public static parseOutputFormat(text: string): Defs.OutputFormatObj {
+    const of: Defs.OutputFormatObj = { attributes: {} };
+    const lines = text.split(/\r?\n/);
+    let inOf = false;
+
+    for (const line of lines) {
+      const trimmed = MapfileParser['stripComments'](line).trim();
+      if (!trimmed) continue;
+
+      const tokens = MapfileParser['tokenize'](trimmed);
+      if (tokens.length === 0) continue;
+
+      if (!inOf && tokens[0].toUpperCase() === 'OUTPUTFORMAT') {
+        inOf = true;
+        continue;
+      }
+
+      if (inOf) {
+        if (tokens[0].toUpperCase() === 'END') break;
+        MapfileParser['applyKeyValuesToOutputFormat'](of, tokens);
+      }
+    }
+
+    return of;
+  }
+}
+
+// ============================================================================
+// INDIVIDUAL COMPONENT SERIALIZER
+// ============================================================================
+
+export class MapfileComponentSerializer {
+  /**
+   * Serialize a STYLE object to mapfile string
+   */
+  public static styleToString(style: Defs.StyleObj): string {
+    const lines: string[] = [];
+    MapfileSerializer['writeStyle'](
+      { lines } as TextWriter,
+      style,
+      0
+    );
+    return lines.join('\n');
+  }
+
+  /**
+   * Serialize a SYMBOL object to mapfile string
+   */
+  public static symbolToString(symbol: Defs.SymbolObj): string {
+    const lines: string[] = [];
+    MapfileSerializer['writeSymbol'](
+      { lines } as TextWriter,
+      symbol,
+      0
+    );
+    return lines.join('\n');
+  }
+
+  /**
+   * Serialize a CLASS object to mapfile string
+   */
+  public static classToString(cls: Defs.ClassObj): string {
+    const lines: string[] = [];
+    MapfileSerializer['writeClass'](
+      { lines } as TextWriter,
+      cls,
+      0
+    );
+    return lines.join('\n');
+  }
+
+  /**
+   * Serialize a LAYER object to mapfile string
+   */
+  public static layerToString(layer: Defs.LayerObj): string {
+    const lines: string[] = [];
+    MapfileSerializer['writeLayer'](
+      { lines } as TextWriter,
+      layer,
+      0
+    );
+    return lines.join('\n');
+  }
+
+  /**
+   * Serialize a LABEL object to mapfile string
+   */
+  public static labelToString(label: Defs.LabelObj): string {
+    const lines: string[] = [];
+    MapfileSerializer['writeLabel'](
+      { lines } as TextWriter,
+      label,
+      0
+    );
+    return lines.join('\n');
+  }
+
+  /**
+   * Serialize a LEADER object to mapfile string
+   */
+  public static leaderToString(leader: Defs.LeaderObj): string {
+    const lines: string[] = [];
+    MapfileSerializer['writeLeader'](
+      { lines } as TextWriter,
+      leader,
+      0
+    );
+    return lines.join('\n');
+  }
+
+  /**
+   * Serialize an OUTPUTFORMAT object to mapfile string
+   */
+  public static outputFormatToString(of: Defs.OutputFormatObj): string {
+    const lines: string[] = [];
+    MapfileSerializer['writeOutputFormat'](
+      { lines } as TextWriter,
+      of,
+      0
+    );
+    return lines.join('\n');
+  }
+
+  /**
+   * Serialize a WEB object to mapfile string
+   */
+  public static webToString(web: Defs.WebObj): string {
+    const lines: string[] = [];
+    MapfileSerializer['writeWeb'](
+      { lines } as TextWriter,
+      web,
+      0
+    );
+    return lines.join('\n');
+  }
+
+  /**
+   * Serialize a JOIN object to mapfile string
+   */
+  public static joinToString(join: Defs.JoinObj): string {
+    const lines: string[] = [];
+    MapfileSerializer['writeJoin'](
+      { lines } as TextWriter,
+      join,
+      0
+    );
+    return lines.join('\n');
+  }
+
+  /**
+   * Serialize a COMPOSITE object to mapfile string
+   */
+  public static compositeToString(composite: Defs.CompositeObj): string {
+    const lines: string[] = [];
+    MapfileSerializer['writeComposite'](
+      { lines } as TextWriter,
+      composite,
+      0
+    );
+    return lines.join('\n');
+  }
+
+  /**
+   * Serialize a FEATURE object to mapfile string
+   */
+  public static featureToString(feature: Defs.FeatureObj): string {
+    const lines: string[] = [];
+    MapfileSerializer['writeFeature'](
+      { lines } as TextWriter,
+      feature,
+      0
+    );
+    return lines.join('\n');
+  }
+}
+
 // Helper type for text output
 interface TextWriter {
   lines: string[];

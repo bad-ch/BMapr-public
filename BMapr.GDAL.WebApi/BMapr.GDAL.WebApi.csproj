@@ -54,6 +54,7 @@
   <ItemGroup>
     <TypeScriptCompile Remove="NSwag\inline-symbols.ts" />
     <TypeScriptCompile Remove="NSwag\mapfile-definitions.ts" />
+    <TypeScriptCompile Remove="NSwag\mapfile-parser.ts" />
     <TypeScriptCompile Remove="NSwag\mapserver.ts" />
   </ItemGroup>
 

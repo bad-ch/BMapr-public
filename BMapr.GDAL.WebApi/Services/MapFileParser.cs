@@ -944,6 +944,10 @@ namespace BMapr.GDAL.WebApi.Services
 
         private static void ApplyKeyValuesToMap(MapObj map, List<string> tokens)
         {
+            ApplyKeyValuesToMapPublic(map, tokens);
+        }
+        internal static void ApplyKeyValuesToMapPublic(MapObj map, List<string> tokens)
+        {
             var key = tokens[0].ToUpperInvariant(); var vals = tokens.Skip(1).ToList(); var joined = string.Join(" ", vals);
             switch (key)
             {
@@ -973,6 +977,10 @@ namespace BMapr.GDAL.WebApi.Services
         }
 
         private static void ApplyKeyValuesToLayer(LayerObj layer, List<string> tokens)
+        {
+            ApplyKeyValuesToLayerPublic(layer, tokens);
+        }
+        internal static void ApplyKeyValuesToLayerPublic(LayerObj layer, List<string> tokens)
         {
             var key = tokens[0].ToUpperInvariant(); var vals = tokens.Skip(1).ToList(); var joined = string.Join(" ", vals);
             switch (key)
@@ -1032,6 +1040,10 @@ namespace BMapr.GDAL.WebApi.Services
 
         private static void ApplyKeyValuesToClass(ClassObj c, List<string> tokens)
         {
+            ApplyKeyValuesToClassPublic(c, tokens);
+        }
+        internal static void ApplyKeyValuesToClassPublic(ClassObj c, List<string> tokens)
+        {
             var key = tokens[0].ToUpperInvariant(); var vals = tokens.Skip(1).ToList(); var joined = string.Join(" ", vals);
             switch (key)
             {
@@ -1054,6 +1066,10 @@ namespace BMapr.GDAL.WebApi.Services
 
         private static void ApplyKeyValuesToLeader(LeaderObj l, List<string> tokens)
         {
+            ApplyKeyValuesToLeaderPublic(l, tokens);
+        }
+        internal static void ApplyKeyValuesToLeaderPublic(LeaderObj l, List<string> tokens)
+        {
             var key = tokens[0].ToUpperInvariant(); var vals = tokens.Skip(1).ToList();
             switch (key)
             {
@@ -1064,6 +1080,10 @@ namespace BMapr.GDAL.WebApi.Services
         }
 
         private static void ApplyKeyValuesToStyle(StyleObj s, List<string> tokens)
+        {
+            ApplyKeyValuesToStylePublic(s, tokens);
+        }
+        internal static void ApplyKeyValuesToStylePublic(StyleObj s, List<string> tokens)
         {
             var key = tokens[0].ToUpperInvariant(); var vals = tokens.Skip(1).ToList(); var joined = string.Join(" ", vals);
             switch (key)
@@ -1106,6 +1126,10 @@ namespace BMapr.GDAL.WebApi.Services
 
         private static void ApplyKeyValuesToLabel(LabelObj l, List<string> tokens)
         {
+            ApplyKeyValuesToLabelPublic(l, tokens);
+        }
+        internal static void ApplyKeyValuesToLabelPublic(LabelObj l, List<string> tokens)
+        {
             var key = tokens[0].ToUpperInvariant(); var vals = tokens.Skip(1).ToList(); var joined = string.Join(" ", vals);
             switch (key)
             {
@@ -1142,6 +1166,10 @@ namespace BMapr.GDAL.WebApi.Services
 
         private static void ApplyKeyValuesToOutputFormat(OutputFormatObj of, List<string> tokens)
         {
+            ApplyKeyValuesToOutputFormatPublic(of, tokens);
+        }
+        internal static void ApplyKeyValuesToOutputFormatPublic(OutputFormatObj of, List<string> tokens)
+        {
             var key = tokens[0].ToUpperInvariant(); var vals = tokens.Skip(1).ToList(); var joined = string.Join(" ", vals);
             switch (key)
             {
@@ -1156,6 +1184,10 @@ namespace BMapr.GDAL.WebApi.Services
         }
 
         private static void ApplyKeyValuesToSymbol(SymbolObj sym, List<string> tokens)
+        {
+            ApplyKeyValuesToSymbolPublic(sym, tokens);
+        }
+        internal static void ApplyKeyValuesToSymbolPublic(SymbolObj sym, List<string> tokens)
         {
             var key = tokens[0].ToUpperInvariant(); var vals = tokens.Skip(1).ToList(); var joined = string.Join(" ", vals);
             switch (key)
@@ -1248,17 +1280,20 @@ namespace BMapr.GDAL.WebApi.Services
         }
 
         // Helpers
-        private static string StripComments(string line)
+        internal static string StripCommentsPublic(string line)
         {
             var sb = new StringBuilder(line.Length); bool inQuotes = false; for (int i = 0; i < line.Length; i++) { var c = line[i]; if (c == '"') { inQuotes = !inQuotes; sb.Append(c); } else if (!inQuotes && c == '#') { break; } else { sb.Append(c); } }
             return sb.ToString().Trim();
         }
-        private static List<string> Tokenize(string line)
+        private static string StripComments(string line) => StripCommentsPublic(line);
+
+        internal static List<string> TokenizePublic(string line)
         {
             var tokens = new List<string>(); var sb = new StringBuilder(); bool inQuotes = false; void Flush() { if (sb.Length > 0) { tokens.Add(sb.ToString()); sb.Clear(); } }
             for (int i = 0; i < line.Length; i++) { char c = line[i]; if (c == '"') { sb.Append(c); inQuotes = !inQuotes; } else if (!inQuotes && char.IsWhiteSpace(c)) { Flush(); } else { sb.Append(c); } }
             Flush(); return tokens;
         }
+        private static List<string> Tokenize(string line) => TokenizePublic(line);
         private static string Unquote(string s) { s = s.Trim(); if (s.Length >= 2 && s[0] == '"' && s[^1] == '"') { var inner = s.Substring(1, s.Length - 2); return inner.Replace("\\\"", "\""); } return s; }
         private static double[] ParseDoubles(List<string> vals, int expected) { if (vals.Count < expected) throw new FormatException($"Expected {expected} numbers, got {vals.Count}"); var arr = new double[expected]; for (int i = 0; i < expected; i++) arr[i] = double.Parse(vals[i], CultureInfo.InvariantCulture); return arr; }
         private static int[] ParseInts(List<string> vals, int expected) { if (vals.Count < expected) throw new FormatException($"Expected {expected} integers, got {vals.Count}"); var arr = new int[expected]; for (int i = 0; i < expected; i++) arr[i] = int.Parse(vals[i], CultureInfo.InvariantCulture); return arr; }
@@ -1295,6 +1330,421 @@ namespace BMapr.GDAL.WebApi.Services
         public static string Quote(string s) => "\"" + s.Replace("\"", "\\\"") + "\"";
         public static string MaybeQuote(string s) { if (NeedsQuoting(s)) return Quote(s); return s; }
         private static bool NeedsQuoting(string s) { if (string.IsNullOrEmpty(s)) return true; return s.Any(ch => char.IsWhiteSpace(ch) || ch == '#' || ch == '"'); }
+    }
+
+    #endregion
+
+    #region Individual Component Parse/Write API
+
+    public static class MapfileComponentParser
+    {
+        /// <summary>Parse a STYLE block from a string</summary>
+        public static StyleObj ParseStyle(string text) => ParseComponentBlock(text, "STYLE", (tokens, _) => 
+        {
+            var style = new StyleObj();
+            MapfileParser.Parse(text, null); // Full parse to get the style
+            return ExtractStyleFromText(text);
+        });
+
+        /// <summary>Parse a SYMBOL block from a string</summary>
+        public static SymbolObj ParseSymbol(string text) => ExtractSymbolFromText(text);
+
+        /// <summary>Parse a CLASS block from a string</summary>
+        public static ClassObj ParseClass(string text) => ExtractClassFromText(text);
+
+        /// <summary>Parse a LAYER block from a string</summary>
+        public static LayerObj ParseLayer(string text) => ExtractLayerFromText(text);
+
+        /// <summary>Parse a LABEL block from a string</summary>
+        public static LabelObj ParseLabel(string text) => ExtractLabelFromText(text);
+
+        /// <summary>Parse a LEADER block from a string</summary>
+        public static LeaderObj ParseLeader(string text) => ExtractLeaderFromText(text);
+
+        /// <summary>Parse an OUTPUTFORMAT block from a string</summary>
+        public static OutputFormatObj ParseOutputFormat(string text) => ExtractOutputFormatFromText(text);
+
+        private static T ParseComponentBlock<T>(string text, string blockName, Func<List<string>, int, T> parser)
+        {
+            var lines = text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+            var tokens = new List<string>();
+            bool inBlock = false;
+
+            foreach (var line in lines)
+            {
+                var trimmed = MapfileParser_Private.StripComments(line).Trim();
+                if (string.IsNullOrEmpty(trimmed)) continue;
+
+                var lineTokens = MapfileParser_Private.Tokenize(trimmed);
+                if (lineTokens.Count == 0) continue;
+
+                if (!inBlock && lineTokens[0].ToUpperInvariant() == blockName)
+                {
+                    inBlock = true;
+                    continue;
+                }
+
+                if (inBlock)
+                {
+                    if (lineTokens[0].ToUpperInvariant() == "END")
+                        break;
+                    tokens.Add(trimmed);
+                }
+            }
+
+            return parser(tokens, 0);
+        }
+
+        private static StyleObj ExtractStyleFromText(string text)
+        {
+            var style = new StyleObj();
+            var lines = text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+            bool inStyle = false;
+
+            foreach (var line in lines)
+            {
+                var trimmed = MapfileParser_Private.StripComments(line).Trim();
+                if (string.IsNullOrEmpty(trimmed)) continue;
+
+                var tokens = MapfileParser_Private.Tokenize(trimmed);
+                if (tokens.Count == 0) continue;
+
+                if (!inStyle && tokens[0].ToUpperInvariant() == "STYLE")
+                {
+                    inStyle = true;
+                    continue;
+                }
+
+                if (inStyle)
+                {
+                    if (tokens[0].ToUpperInvariant() == "END")
+                        break;
+                    MapfileParser_Private.ApplyKeyValuesToStyle(style, tokens);
+                }
+            }
+
+            return style;
+        }
+
+        private static SymbolObj ExtractSymbolFromText(string text)
+        {
+            var symbol = new SymbolObj();
+            var lines = text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+            bool inSymbol = false;
+
+            foreach (var line in lines)
+            {
+                var trimmed = MapfileParser_Private.StripComments(line).Trim();
+                if (string.IsNullOrEmpty(trimmed)) continue;
+
+                var tokens = MapfileParser_Private.Tokenize(trimmed);
+                if (tokens.Count == 0) continue;
+
+                if (!inSymbol && tokens[0].ToUpperInvariant() == "SYMBOL")
+                {
+                    inSymbol = true;
+                    continue;
+                }
+
+                if (inSymbol)
+                {
+                    if (tokens[0].ToUpperInvariant() == "END")
+                        break;
+                    MapfileParser_Private.ApplyKeyValuesToSymbol(symbol, tokens);
+                }
+            }
+
+            return symbol;
+        }
+
+        private static ClassObj ExtractClassFromText(string text)
+        {
+            var cls = new ClassObj();
+            var lines = text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+            bool inClass = false;
+            var stack = new Stack<string>();
+
+            foreach (var line in lines)
+            {
+                var trimmed = MapfileParser_Private.StripComments(line).Trim();
+                if (string.IsNullOrEmpty(trimmed)) continue;
+
+                var tokens = MapfileParser_Private.Tokenize(trimmed);
+                if (tokens.Count == 0) continue;
+
+                if (!inClass && tokens[0].ToUpperInvariant() == "CLASS")
+                {
+                    inClass = true;
+                    continue;
+                }
+
+                if (inClass)
+                {
+                    var head = tokens[0].ToUpperInvariant();
+                    if (head == "STYLE")
+                    {
+                        var style = new StyleObj();
+                        cls.Styles.Add(style);
+                        stack.Push("STYLE");
+                        continue;
+                    }
+                    if (head == "LABEL")
+                    {
+                        var label = new LabelObj();
+                        cls.Labels.Add(label);
+                        stack.Push("LABEL");
+                        continue;
+                    }
+                    if (head == "LEADER")
+                    {
+                        cls.Leader = new LeaderObj();
+                        stack.Push("LEADER");
+                        continue;
+                    }
+                    if (head == "END")
+                    {
+                        if (stack.Count > 0)
+                            stack.Pop();
+                        else
+                            break;
+                        continue;
+                    }
+                    if (stack.Count == 0)
+                        MapfileParser_Private.ApplyKeyValuesToClass(cls, tokens);
+                }
+            }
+
+            return cls;
+        }
+
+        private static LayerObj ExtractLayerFromText(string text)
+        {
+            var layer = new LayerObj();
+            var lines = text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+            bool inLayer = false;
+
+            foreach (var line in lines)
+            {
+                var trimmed = MapfileParser_Private.StripComments(line).Trim();
+                if (string.IsNullOrEmpty(trimmed)) continue;
+
+                var tokens = MapfileParser_Private.Tokenize(trimmed);
+                if (tokens.Count == 0) continue;
+
+                if (!inLayer && tokens[0].ToUpperInvariant() == "LAYER")
+                {
+                    inLayer = true;
+                    continue;
+                }
+
+                if (inLayer)
+                {
+                    if (tokens[0].ToUpperInvariant() == "END")
+                        break;
+                    MapfileParser_Private.ApplyKeyValuesToLayer(layer, tokens);
+                }
+            }
+
+            return layer;
+        }
+
+        private static LabelObj ExtractLabelFromText(string text)
+        {
+            var label = new LabelObj();
+            var lines = text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+            bool inLabel = false;
+
+            foreach (var line in lines)
+            {
+                var trimmed = MapfileParser_Private.StripComments(line).Trim();
+                if (string.IsNullOrEmpty(trimmed)) continue;
+
+                var tokens = MapfileParser_Private.Tokenize(trimmed);
+                if (tokens.Count == 0) continue;
+
+                if (!inLabel && tokens[0].ToUpperInvariant() == "LABEL")
+                {
+                    inLabel = true;
+                    continue;
+                }
+
+                if (inLabel)
+                {
+                    if (tokens[0].ToUpperInvariant() == "END")
+                        break;
+                    MapfileParser_Private.ApplyKeyValuesToLabel(label, tokens);
+                }
+            }
+
+            return label;
+        }
+
+        private static LeaderObj ExtractLeaderFromText(string text)
+        {
+            var leader = new LeaderObj();
+            var lines = text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+            bool inLeader = false;
+
+            foreach (var line in lines)
+            {
+                var trimmed = MapfileParser_Private.StripComments(line).Trim();
+                if (string.IsNullOrEmpty(trimmed)) continue;
+
+                var tokens = MapfileParser_Private.Tokenize(trimmed);
+                if (tokens.Count == 0) continue;
+
+                if (!inLeader && tokens[0].ToUpperInvariant() == "LEADER")
+                {
+                    inLeader = true;
+                    continue;
+                }
+
+                if (inLeader)
+                {
+                    if (tokens[0].ToUpperInvariant() == "END")
+                        break;
+                    MapfileParser_Private.ApplyKeyValuesToLeader(leader, tokens);
+                }
+            }
+
+            return leader;
+        }
+
+        private static OutputFormatObj ExtractOutputFormatFromText(string text)
+        {
+            var of = new OutputFormatObj();
+            var lines = text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+            bool inOf = false;
+
+            foreach (var line in lines)
+            {
+                var trimmed = MapfileParser_Private.StripComments(line).Trim();
+                if (string.IsNullOrEmpty(trimmed)) continue;
+
+                var tokens = MapfileParser_Private.Tokenize(trimmed);
+                if (tokens.Count == 0) continue;
+
+                if (!inOf && tokens[0].ToUpperInvariant() == "OUTPUTFORMAT")
+                {
+                    inOf = true;
+                    continue;
+                }
+
+                if (inOf)
+                {
+                    if (tokens[0].ToUpperInvariant() == "END")
+                        break;
+                    MapfileParser_Private.ApplyKeyValuesToOutputFormat(of, tokens);
+                }
+            }
+
+            return of;
+        }
+    }
+
+    public static class MapfileComponentSerializer
+    {
+        /// <summary>Serialize a STYLE object to mapfile string</summary>
+        public static string StyleToString(StyleObj style)
+        {
+            var sw = new StringWriter();
+            style.Write(sw, 0);
+            return sw.ToString();
+        }
+
+        /// <summary>Serialize a SYMBOL object to mapfile string</summary>
+        public static string SymbolToString(SymbolObj symbol)
+        {
+            var sw = new StringWriter();
+            symbol.Write(sw, 0);
+            return sw.ToString();
+        }
+
+        /// <summary>Serialize a CLASS object to mapfile string</summary>
+        public static string ClassToString(ClassObj cls)
+        {
+            var sw = new StringWriter();
+            cls.Write(sw, 0);
+            return sw.ToString();
+        }
+
+        /// <summary>Serialize a LAYER object to mapfile string</summary>
+        public static string LayerToString(LayerObj layer)
+        {
+            var sw = new StringWriter();
+            layer.Write(sw, 0);
+            return sw.ToString();
+        }
+
+        /// <summary>Serialize a LABEL object to mapfile string</summary>
+        public static string LabelToString(LabelObj label)
+        {
+            var sw = new StringWriter();
+            label.Write(sw, 0);
+            return sw.ToString();
+        }
+
+        /// <summary>Serialize a LEADER object to mapfile string</summary>
+        public static string LeaderToString(LeaderObj leader)
+        {
+            var sw = new StringWriter();
+            leader.Write(sw, 0);
+            return sw.ToString();
+        }
+
+        /// <summary>Serialize an OUTPUTFORMAT object to mapfile string</summary>
+        public static string OutputFormatToString(OutputFormatObj of)
+        {
+            var sw = new StringWriter();
+            of.Write(sw, 0);
+            return sw.ToString();
+        }
+
+        /// <summary>Serialize a WEB object to mapfile string</summary>
+        public static string WebToString(WebObj web)
+        {
+            var sw = new StringWriter();
+            web.Write(sw, 0);
+            return sw.ToString();
+        }
+
+        /// <summary>Serialize a JOIN object to mapfile string</summary>
+        public static string JoinToString(JoinObj join)
+        {
+            var sw = new StringWriter();
+            join.Write(sw, 0);
+            return sw.ToString();
+        }
+
+        /// <summary>Serialize a COMPOSITE object to mapfile string</summary>
+        public static string CompositeToString(CompositeObj composite)
+        {
+            var sw = new StringWriter();
+            composite.Write(sw, 0);
+            return sw.ToString();
+        }
+
+        /// <summary>Serialize a FEATURE object to mapfile string</summary>
+        public static string FeatureToString(FeatureObj feature)
+        {
+            var sw = new StringWriter();
+            feature.Write(sw, 0);
+            return sw.ToString();
+        }
+    }
+
+    // Helper class to expose private parser methods for component parsing
+    internal static class MapfileParser_Private
+    {
+        public static string StripComments(string line) => MapfileParser.StripCommentsPublic(line);
+        public static List<string> Tokenize(string line) => MapfileParser.TokenizePublic(line);
+        public static void ApplyKeyValuesToStyle(StyleObj s, List<string> tokens) => MapfileParser.ApplyKeyValuesToStylePublic(s, tokens);
+        public static void ApplyKeyValuesToSymbol(SymbolObj sym, List<string> tokens) => MapfileParser.ApplyKeyValuesToSymbolPublic(sym, tokens);
+        public static void ApplyKeyValuesToClass(ClassObj c, List<string> tokens) => MapfileParser.ApplyKeyValuesToClassPublic(c, tokens);
+        public static void ApplyKeyValuesToLayer(LayerObj layer, List<string> tokens) => MapfileParser.ApplyKeyValuesToLayerPublic(layer, tokens);
+        public static void ApplyKeyValuesToLabel(LabelObj l, List<string> tokens) => MapfileParser.ApplyKeyValuesToLabelPublic(l, tokens);
+        public static void ApplyKeyValuesToLeader(LeaderObj l, List<string> tokens) => MapfileParser.ApplyKeyValuesToLeaderPublic(l, tokens);
+        public static void ApplyKeyValuesToOutputFormat(OutputFormatObj of, List<string> tokens) => MapfileParser.ApplyKeyValuesToOutputFormatPublic(of, tokens);
     }
 
     #endregion
