@@ -18,6 +18,38 @@
             return mapserver.DrawImage("image/png",width, height, CancellationToken.None);
         }
 
+        public static byte[] GetPolygonLegendDefinition(int width, int height, string style, string symbol, string label)
+        {
+            var mapfile = GetMapTemplate()
+                .Replace("##width##", width.ToString())
+                .Replace("##height##", height.ToString())
+                .Replace("##type##", "POLYGON")
+                .Replace("##feature##", "POINTS 10 10 90 10 90 90 10 90 10 10 END")
+                .Replace("##style##", style)
+                .Replace("##symbol##", symbol)
+                .Replace("##label##", label);
+
+            var mapserver = new Mapserver(mapfile);
+
+            return mapserver.DrawImage("image/png", width, height, CancellationToken.None);
+        }
+
+        public static byte[] GetLineLegendDefinition(int width, int height, string style, string symbol, string label)
+        {
+            var mapfile = GetMapTemplate()
+                .Replace("##width##", width.ToString())
+                .Replace("##height##", height.ToString())
+                .Replace("##type##", "LINE")
+                .Replace("##feature##", "POINTS 10 10 40 90 60 30 90 90 END")
+                .Replace("##style##", style)
+                .Replace("##symbol##", symbol)
+                .Replace("##label##", label);
+
+            var mapserver = new Mapserver(mapfile);
+
+            return mapserver.DrawImage("image/png", width, height, CancellationToken.None);
+        }
+
         private static string GetMapTemplate()
         {
             return @"
@@ -40,7 +72,6 @@
                   END
 
                   IMAGETYPE ""png""
-                  IMAGECOLOR 240 248 255  # AliceBlue
 
                   ##symbol##
 
