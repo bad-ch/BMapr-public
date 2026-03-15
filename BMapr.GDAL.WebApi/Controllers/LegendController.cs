@@ -37,6 +37,4 @@ public class LegendController : DefaultController
 
         throw new NotImplementedException($"Legend for geometry type {req.Geometry} is not implemented yet.");
     }
-
-
 }
