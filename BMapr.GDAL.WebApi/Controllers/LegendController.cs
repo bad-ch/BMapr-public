@@ -1,14 +1,10 @@
-﻿using BMapr.GDAL.WebApi.Authentication.OgcBasic;
-using BMapr.GDAL.WebApi.Models;
-using Microsoft.AspNetCore.Mvc;
-using OSGeo.MapServer;
-using System.Text.RegularExpressions;
+﻿using BMapr.GDAL.WebApi.Models;
 using BMapr.GDAL.WebApi.Services;
+using Microsoft.AspNetCore.Mvc;
 
 namespace BMapr.GDAL.WebApi.Controllers;
 
 [ApiController]
-[BasicAuthIfPassword]
 [Route("api/legend")]
 public class LegendController : DefaultController
 {
@@ -19,8 +15,8 @@ public class LegendController : DefaultController
         _logger = logger;
     }
 
-    [HttpPost("{project}")]
-    public IActionResult GetLegend(string project, [FromBody] PreviewRequest req)
+    [HttpPost("")]
+    public IActionResult GetLegend([FromBody] PreviewRequest req)
     {
         if (req.Geometry.ToLower() == "point")
         {
