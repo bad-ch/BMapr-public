@@ -1,11 +1,10 @@
-﻿using System.Drawing.Imaging;
-using BMapr.GDAL.WebApi.Models;
+﻿using BMapr.GDAL.WebApi.Models;
 using BMapr.GDAL.WebApi.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
+using System.Drawing.Imaging;
 
 namespace BMapr.GDAL.WebApi.Controllers
 {
