@@ -4,6 +4,7 @@ using BMapr.GDAL.WebApi.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 
 namespace BMapr.GDAL.WebApi.Controllers
@@ -410,6 +411,72 @@ namespace BMapr.GDAL.WebApi.Controllers
             }
 
             return NotFound();
+        }
+
+        /// <summary>
+        /// Update mapfile from JSON
+        /// </summary>
+        /// <param name="project">Guid from project</param>
+        /// <param name="token">Access token</param>
+        /// <param name="mapObj">Map object as JSON in the body of the request</param>
+        /// <returns>Ok</returns>
+        [HttpPost("UpdateMapFileData/{project}")]
+        public ActionResult UpdateMapFileData(string project, [FromQuery(Name = "token")] string? token, [FromBody] Object mapObj)
+        {
+            try
+            {
+                if (mapObj == null)
+                {
+                    _logger.LogError("UpdateMapFileData: mapObj is null");
+                    return BadRequest("Map object is null");
+                }
+
+                var projectSettings = ProjectSettingsService.Get(project, Config);
+
+                if (!TokenService.Check(Request, IConfig, projectSettings, token))
+                {
+                    _logger.LogError($"UpdateMapFileData: Token validation failed for project {project}");
+                    return BadRequest("User or system token invalid");
+                }
+
+                Config.Host = HostService.Get(Request, IConfig);
+
+                var mapPath = Config.DataProject(project).FullName;
+                var mapFile = Path.Combine(mapPath, $"ZZZ_{Guid.NewGuid()}.map");
+
+                DefaultContractResolver contractResolver = new DefaultContractResolver
+                {
+                    NamingStrategy = new CamelCaseNamingStrategy()
+                };
+
+                var mapObjDeserialized = JsonConvert.DeserializeObject<MapObj>(
+                    mapObj.ToString(),
+                    new JsonSerializerSettings()
+                    {
+                        ContractResolver = contractResolver,
+                        ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                        TypeNameHandling = TypeNameHandling.Objects,
+                    }
+                );
+
+                if (mapObjDeserialized == null)
+                {
+                    _logger.LogError("UpdateMapFileData: Failed to deserialize map object");
+                    return BadRequest("Failed to deserialize map object");
+                }
+
+                var map = mapObjDeserialized.ToMapfileString();
+
+                System.IO.File.WriteAllText(mapFile, map);
+
+                _logger.LogInformation($"UpdateMapFileData: Successfully updated map file for project {project}");
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"UpdateMapFileData: Exception occurred - {ex.Message}", ex);
+                return BadRequest($"Error updating map file: {ex.Message}");
+            }
         }
 
         /// <summary>
