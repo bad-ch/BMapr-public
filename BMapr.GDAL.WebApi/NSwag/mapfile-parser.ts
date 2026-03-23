@@ -238,13 +238,13 @@ export class MapfileParser {
 
             if (head === 'SYMBOL') {
                 if (ctx.type === CtxType.Map) {
-                    const sym: Defs.SymbolObj = { attributes: {} };
+                    const sym: Defs.SymbolObj = { pattern: [], attributes: {} };
                     (ctx.node as Defs.MapObj).symbols.push(sym);
                     stack.push({ type: CtxType.Symbol, node: sym });
                     continue;
                 }
                 if (ctx.type === CtxType.Layer) {
-                    const sym: Defs.SymbolObj = { attributes: {} };
+                    const sym: Defs.SymbolObj = { pattern: [], attributes: {} };
                     (ctx.node as Defs.LayerObj).symbols.push(sym);
                     stack.push({ type: CtxType.Symbol, node: sym });
                     continue;
@@ -1067,11 +1067,36 @@ export class MapfileParser {
             case 'GAP':
                 sym.gap = Math.floor(MapfileParser.parseDouble(vals));
                 break;
+            case 'WIDTH':
+                sym.width = MapfileParser.parseDouble(vals);
+                break;
             case 'LINEWIDTH':
                 sym.lineWidth = Math.floor(MapfileParser.parseDouble(vals));
                 break;
+            case 'SIZE':
+                sym.size = MapfileParser.parseDouble(vals);
+                break;
+            case 'ANGLE':
+                sym.angle = joined;
+                break;
+            case 'PATTERN':
+                if (!sym.pattern) sym.pattern = [];
+                for (const v of vals) {
+                    const num = parseFloat(v);
+                    if (!isNaN(num)) {
+                        sym.pattern.push(num);
+                    }
+                }
+                break;
+            case 'OFFSET':
+                sym.offsetX = vals[0];
+                sym.offsetY = vals[1];
+                break;
             case 'FILLED':
                 sym.filled = joined.toUpperCase();
+                break;
+            case 'ANTIALIAS':
+                sym.antialias = joined.toUpperCase();
                 break;
             case 'ANCHORPOINT':
                 sym.anchorPoint = joined;
@@ -1432,8 +1457,25 @@ export class MapfileSerializer {
             writer.lines.push('  '.repeat(indent + 1) + 'END');
         }
         if (sym.gap !== undefined) MapfileSerializer.writeKeyValues(writer, indent + 1, 'GAP', sym.gap.toString());
+        if (sym.width !== undefined) MapfileSerializer.writeKeyValues(writer, indent + 1, 'WIDTH', sym.width.toString());
         if (sym.lineWidth !== undefined) MapfileSerializer.writeKeyValues(writer, indent + 1, 'LINEWIDTH', sym.lineWidth.toString());
+        if (sym.size !== undefined) MapfileSerializer.writeKeyValues(writer, indent + 1, 'SIZE', sym.size.toString());
+        if (sym.angle) MapfileSerializer.writeKeyValues(writer, indent + 1, 'ANGLE', sym.angle);
+        if (sym.pattern && sym.pattern.length > 0) {
+            writer.lines.push('  '.repeat(indent + 1) + 'PATTERN');
+            let line = '  '.repeat(indent + 2);
+            for (let i = 0; i < sym.pattern.length; i++) {
+                if (i > 0) line += ' ';
+                line += sym.pattern[i].toString();
+            }
+            writer.lines.push(line);
+            writer.lines.push('  '.repeat(indent + 1) + 'END');
+        }
+        if (sym.offsetX || sym.offsetY) {
+            MapfileSerializer.writeKeyValues(writer, indent + 1, 'OFFSET', sym.offsetX || '0', sym.offsetY || '0');
+        }
         if (sym.filled) MapfileSerializer.writeKeyValues(writer, indent + 1, 'FILLED', sym.filled);
+        if (sym.antialias) MapfileSerializer.writeKeyValues(writer, indent + 1, 'ANTIALIAS', sym.antialias);
         if (sym.anchorPoint) MapfileSerializer.writeKeyValues(writer, indent + 1, 'ANCHORPOINT', sym.anchorPoint);
         MapfileSerializer.writeAttributes(writer, indent + 1, sym.attributes ?? {});
         writer.lines.push('  '.repeat(indent) + 'END');
@@ -1843,7 +1885,7 @@ export class MapfileComponentParser {
      * @param text Mapfile text containing SYMBOL block
      */
     public static parseSymbol(text: string): Defs.SymbolObj {
-        const symbol: Defs.SymbolObj = { attributes: {} };
+        const symbol: Defs.SymbolObj = { pattern: [], attributes: {} };
         const lines = text.split(/\r?\n/);
         let inSymbol = false;
 

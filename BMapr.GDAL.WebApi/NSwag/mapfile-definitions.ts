@@ -67,34 +67,55 @@ export type KeyValuePair<K = string, V = string> = { key: K; value: V };
 export interface SymbolObj {
   /** Symbol name for reference */
   name?: string;
-  
+
   /** Symbol type: ELLIPSE, VECTOR, PIXMAP, TRUETYPE, HATCH, SIMPLE */
   type?: string;
-  
+
   /** Path to image file for PIXMAP symbols */
   image?: string;
-  
+
   /** Font name for TRUETYPE symbols */
   font?: string;
-  
+
   /** Character code for TRUETYPE symbols */
   character?: string;
-  
+
   /** Floating-point coordinates for VECTOR/ELLIPSE symbols */
   points?: number[];
-  
+
   /** Gap between repeated symbols */
   gap?: number;
-  
+
+  /** Width of symbol */
+  width?: number;
+
   /** Line width for symbol outline */
   lineWidth?: number;
-  
+
+  /** Size of symbol */
+  size?: number;
+
+  /** Angular rotation of symbols (numeric or AUTO) */
+  angle?: string;
+
+  /** Pattern for symbol rendering */
+  pattern?: number[];
+
+  /** X-axis offset */
+  offsetX?: string;
+
+  /** Y-axis offset */
+  offsetY?: string;
+
   /** Whether symbol is filled: TRUE or FALSE */
   filled?: string;
-  
+
+  /** Antialiasing control: ON or OFF */
+  antialias?: string;
+
   /** Anchor point for symbol positioning */
   anchorPoint?: string;
-  
+
   /** Custom attributes */
   attributes?: AttributesBag;
 }

@@ -137,8 +137,15 @@ namespace BMapr.GDAL.WebApi.Services
         public string? Character { get; set; }
         public double[]? Points { get; set; }
         public int? Gap { get; set; }
+        public double? Width { get; set; }
         public int? LineWidth { get; set; }
+        public double? Size { get; set; }
+        public string? Angle { get; set; }
+        public List<double> Pattern { get; } = new();
+        public string? OffsetX { get; set; }
+        public string? OffsetY { get; set; }
         public string? Filled { get; set; }
+        public string? Antialias { get; set; }
         public string? AnchorPoint { get; set; }
         public Dictionary<string, List<string[]>> Attributes { get; } = new(StringComparer.OrdinalIgnoreCase);
 
@@ -163,8 +170,28 @@ namespace BMapr.GDAL.WebApi.Services
                 MapfileSerializer.WriteIndent(w, indent + 1); w.WriteLine("END");
             }
             if (Gap.HasValue) MapfileSerializer.WriteKeyValues(w, indent + 1, "GAP", Gap.Value.ToString(CultureInfo.InvariantCulture));
+            if (Width.HasValue) MapfileSerializer.WriteKeyValues(w, indent + 1, "WIDTH", Width.Value.ToString(CultureInfo.InvariantCulture));
             if (LineWidth.HasValue) MapfileSerializer.WriteKeyValues(w, indent + 1, "LINEWIDTH", LineWidth.Value.ToString(CultureInfo.InvariantCulture));
+            if (Size.HasValue) MapfileSerializer.WriteKeyValues(w, indent + 1, "SIZE", Size.Value.ToString(CultureInfo.InvariantCulture));
+            if (!string.IsNullOrWhiteSpace(Angle)) MapfileSerializer.WriteKeyValues(w, indent + 1, "ANGLE", Angle!);
+            if (Pattern.Count > 0)
+            {
+                MapfileSerializer.WriteKeyValues(w, indent + 1, "PATTERN");
+                MapfileSerializer.WriteIndent(w, indent + 2);
+                for (int i = 0; i < Pattern.Count; i++)
+                {
+                    if (i > 0) w.Write(' ');
+                    w.Write(Pattern[i].ToString(CultureInfo.InvariantCulture));
+                }
+                w.WriteLine();
+                MapfileSerializer.WriteIndent(w, indent + 1); w.WriteLine("END");
+            }
+            if (!string.IsNullOrWhiteSpace(OffsetX) || !string.IsNullOrWhiteSpace(OffsetY))
+            {
+                MapfileSerializer.WriteKeyValues(w, indent + 1, "OFFSET", (OffsetX ?? "0"), (OffsetY ?? "0"));
+            }
             if (!string.IsNullOrWhiteSpace(Filled)) MapfileSerializer.WriteKeyValues(w, indent + 1, "FILLED", Filled!);
+            if (!string.IsNullOrWhiteSpace(Antialias)) MapfileSerializer.WriteKeyValues(w, indent + 1, "ANTIALIAS", Antialias!);
             if (!string.IsNullOrWhiteSpace(AnchorPoint)) MapfileSerializer.WriteKeyValues(w, indent + 1, "ANCHORPOINT", AnchorPoint!);
             MapfileSerializer.WriteAttributes(w, indent + 1, Attributes);
             MapfileSerializer.WriteIndent(w, indent); w.WriteLine("END");
@@ -1199,8 +1226,14 @@ namespace BMapr.GDAL.WebApi.Services
                 case "CHARACTER": sym.Character = Unquote(joined); break;
                 case "POINTS": break; // Handled specially in the main parser loop
                 case "GAP": sym.Gap = (int)ParseDouble(vals); break;
+                case "WIDTH": sym.Width = ParseDouble(vals); break;
                 case "LINEWIDTH": sym.LineWidth = (int)ParseDouble(vals); break;
+                case "SIZE": sym.Size = ParseDouble(vals); break;
+                case "ANGLE": sym.Angle = joined; break;
+                case "PATTERN": foreach (var v in vals) { if (double.TryParse(v, NumberStyles.Float, CultureInfo.InvariantCulture, out var d)) sym.Pattern.Add(d); } break;
+                case "OFFSET": sym.OffsetX = vals.ElementAtOrDefault(0); sym.OffsetY = vals.ElementAtOrDefault(1); break;
                 case "FILLED": sym.Filled = joined.ToUpperInvariant(); break;
+                case "ANTIALIAS": sym.Antialias = joined.ToUpperInvariant(); break;
                 case "ANCHORPOINT": sym.AnchorPoint = joined; break;
                 default: AddToAttributes(sym.Attributes, tokens); break;
             }
