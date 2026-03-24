@@ -110,6 +110,10 @@
     </Content>
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Data\share\library\" />
+  </ItemGroup>
+
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
     <Exec Command="FOR /F &quot;tokens=* USEBACKQ&quot; %25%25F IN (`git rev-parse --abbrev-ref HEAD`) DO (&#xD;&#xA;SET b=%25%25F&#xD;&#xA;)&#xD;&#xA;FOR /F &quot;tokens=* USEBACKQ&quot; %25%25F IN (`git rev-parse HEAD`) DO (&#xD;&#xA;SET c=%25%25F&#xD;&#xA;)&#xD;&#xA;FOR /F &quot;tokens=* USEBACKQ&quot; %25%25F IN (`git describe --tags`) DO (&#xD;&#xA;SET t=%25%25F&#xD;&#xA;)&#xD;&#xA;FOR /F &quot;tokens=* USEBACKQ&quot; %25%25F IN (`git describe --abbrev^=0 --tags`) DO (&#xD;&#xA;SET ver=%25%25F&#xD;&#xA;)&#xD;&#xA;&#xD;&#xA;echo {&quot;CreationDate&quot;:&quot;%25DATE%25&quot;, &gt; version.json&#xD;&#xA;echo &quot;CreationTime&quot;:&quot;%25TIME%25&quot;, &gt;&gt; version.json&#xD;&#xA;echo &quot;Branch&quot;:&quot;%25b%25&quot;, &gt;&gt; version.json&#xD;&#xA;echo &quot;Commit&quot;:&quot;%25c%25&quot;, &gt;&gt; version.json&#xD;&#xA;echo &quot;Version&quot;:&quot;%25ver%25&quot;, &gt;&gt; version.json&#xD;&#xA;echo &quot;Tag&quot;:&quot;%25t%25&quot;} &gt;&gt; version.json&#xD;&#xA;&#xD;&#xA;echo ^&lt;Project Sdk=&quot;Microsoft.NET.Sdk.Web&quot;^&gt;^&lt;PropertyGroup^&gt;^&lt;Authors^&gt;Daniel Baumgartner^&lt;/Authors^&gt;^&lt;Company^&gt;-^&lt;/Company^&gt;^&lt;Copyright^&gt;© 2022 %25b%25,%25c%25^&lt;/Copyright^&gt;^&lt;Product^&gt;Mapserver GDAL WebApi^&lt;/Product^&gt;^&lt;ProductName^&gt;Mapserver GDAL WebApi^&lt;/ProductName^&gt;^&lt;ProductVersion^&gt;^%25ver%25^&lt;/ProductVersion^&gt;^&lt;AssemblyVersion^&gt;%25ver%25^&lt;/AssemblyVersion^&gt;^&lt;FileVersion^&gt;%25ver%25^&lt;/FileVersion^&gt;^&lt;/PropertyGroup^&gt;^&lt;/Project^&gt; &gt; GlobalAssemblyInfo.proj" />
   </Target>
