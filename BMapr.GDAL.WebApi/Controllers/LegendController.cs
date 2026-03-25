@@ -18,17 +18,19 @@ public class LegendController : DefaultController
     [HttpPost("")]
     public IActionResult GetLegend([FromBody] PreviewRequest req)
     {
+        var sharePath = Config.DataShare.FullName;
+
         if (req.Geometry.ToLower() == "point")
         {
-           return File(LegendService.GetPointLegendDefinition(req.Width, req.Height, req.Style, req.Symbol, ""),"image/png");
+           return File(LegendService.GetPointLegendDefinition(req.Width, req.Height, req.Style, req.Symbol, "", sharePath), "image/png");
         }
         if (req.Geometry.ToLower() == "polygon")
         {
-            return File(LegendService.GetPolygonLegendDefinition(req.Width, req.Height, req.Style, req.Symbol, ""),"image/png");
+            return File(LegendService.GetPolygonLegendDefinition(req.Width, req.Height, req.Style, req.Symbol, "", sharePath),"image/png");
         }
         if (req.Geometry.ToLower() == "line")
         {
-            return File(LegendService.GetLineLegendDefinition(req.Width, req.Height, req.Style, req.Symbol, ""), "image/png");
+            return File(LegendService.GetLineLegendDefinition(req.Width, req.Height, req.Style, req.Symbol, "", sharePath), "image/png");
         }
 
         throw new NotImplementedException($"Legend for geometry type {req.Geometry} is not implemented yet.");

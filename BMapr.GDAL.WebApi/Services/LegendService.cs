@@ -2,7 +2,7 @@
 {
     public class LegendService
     {
-        public static byte[] GetPointLegendDefinition(int width, int height, string style, string symbol, string label)
+        public static byte[] GetPointLegendDefinition(int width, int height, string style, string symbol, string label, string sharePath)
         {
             var mapfile = GetMapTemplate()
                 .Replace("##width##", width.ToString())
@@ -11,14 +11,15 @@
                 .Replace("##feature##", "POINTS 50 50 END")
                 .Replace("##style##", style)
                 .Replace("##symbol##", symbol)
-                .Replace("##label##", label);
+                .Replace("##label##", label)
+                .Replace("##share##", sharePath);
 
             var mapserver = new Mapserver(mapfile);
 
             return mapserver.DrawImage("image/png",width, height, CancellationToken.None);
         }
 
-        public static byte[] GetPolygonLegendDefinition(int width, int height, string style, string symbol, string label)
+        public static byte[] GetPolygonLegendDefinition(int width, int height, string style, string symbol, string label, string sharePath)
         {
             var mapfile = GetMapTemplate()
                 .Replace("##width##", width.ToString())
@@ -27,14 +28,15 @@
                 .Replace("##feature##", "POINTS 10 10 90 10 90 90 10 90 10 10 END")
                 .Replace("##style##", style)
                 .Replace("##symbol##", symbol)
-                .Replace("##label##", label);
+                .Replace("##label##", label)
+                .Replace("##share##", sharePath);
 
             var mapserver = new Mapserver(mapfile);
 
             return mapserver.DrawImage("image/png", width, height, CancellationToken.None);
         }
 
-        public static byte[] GetLineLegendDefinition(int width, int height, string style, string symbol, string label)
+        public static byte[] GetLineLegendDefinition(int width, int height, string style, string symbol, string label, string sharePath)
         {
             var mapfile = GetMapTemplate()
                 .Replace("##width##", width.ToString())
@@ -43,7 +45,8 @@
                 .Replace("##feature##", "POINTS 10 10 40 90 60 30 90 90 END")
                 .Replace("##style##", style)
                 .Replace("##symbol##", symbol)
-                .Replace("##label##", label);
+                .Replace("##label##", label)
+                .Replace("##share##", sharePath);
 
             var mapserver = new Mapserver(mapfile);
 
@@ -61,6 +64,7 @@
                   SIZE ##width## ##height##
                   EXTENT 0 0 100 100
                   UNITS METERS
+                  FONTSET ""##share##/font.list"" 
 
                   OUTPUTFORMAT
                     NAME ""png""
