@@ -2,7 +2,6 @@
 using BMapr.GDAL.WebApi.Models.Spatial;
 using LiteDB;
 using Microsoft.Data.SqlClient;
-using System.ClientModel.Primitives;
 using System.Data;
 using System.Text;
 

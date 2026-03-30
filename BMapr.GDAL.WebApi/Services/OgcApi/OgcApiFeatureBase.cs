@@ -1,5 +1,4 @@
-﻿using Azure.Core;
-using BMapr.GDAL.WebApi.Models;
+﻿using BMapr.GDAL.WebApi.Models;
 using BMapr.GDAL.WebApi.Models.MapFile;
 using BMapr.GDAL.WebApi.Models.OgcApi.Features;
 using BMapr.GDAL.WebApi.Models.Spatial;
