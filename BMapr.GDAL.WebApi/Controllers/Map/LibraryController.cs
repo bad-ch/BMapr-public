@@ -1,6 +1,4 @@
 ﻿using BMapr.GDAL.WebApi.Models;
-using BMapr.GDAL.WebApi.Models.Map;
-using BMapr.GDAL.WebApi.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BMapr.GDAL.WebApi.Controllers.Map;

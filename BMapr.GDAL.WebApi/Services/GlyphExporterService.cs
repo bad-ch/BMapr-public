@@ -1,6 +1,7 @@
 ﻿using SkiaSharp;
 using System.Collections.Generic;
 using System.Text;
+using Newtonsoft.Json;
 
 namespace BMapr.GDAL.WebApi.Services;
 
@@ -142,11 +143,23 @@ $@"<svg xmlns='http://www.w3.org/2000/svg'
         File.WriteAllText(outputPath, svg, Encoding.UTF8);
     }
 
-    public static void ExportAll(string filePath, bool png, bool svg, string fontPath, string outputPath, float fontSize = 2048f, int canvasSize = 256)
+    // ✅ PNG Export as Base64
+    public string ExportPngAsBase64(string pngPath)
+    {
+        if (!File.Exists(pngPath))
+            throw new FileNotFoundException("PNG file not found.", pngPath);
+
+        byte[] imageBytes = File.ReadAllBytes(pngPath);
+        string base64String = Convert.ToBase64String(imageBytes);
+
+        return $"data:image/png;base64,{base64String}";
+    }
+
+    public static void ExportAll(string fontFilePath, bool png, bool svg, string outputPath, float fontSize = 2048f, int canvasSize = 256)
     {
 
-        var exporter = new GlyphExporterService(filePath, fontSize, canvasSize);
-        var exportedChars = new List<string>();
+        var exporter = new GlyphExporterService(fontFilePath, fontSize, canvasSize);
+        var exportedChars = new List<(string hex, string pngContent)>();
 
         for (int cp = 0; cp <= 0x10FFFF; cp++)
         {
@@ -159,9 +172,19 @@ $@"<svg xmlns='http://www.w3.org/2000/svg'
 
             string hex = cp.ToString("X");
 
+            var pngContent = string.Empty;
+
             if (png)
             {
-                exporter.ExportPng(ch, Path.Combine(outputPath, $"png/{hex}.png"));
+                var pngPath = Path.Combine(outputPath, $"png/{hex}.png");
+                exporter.ExportPng(ch, pngPath);
+
+                if (!File.Exists(pngPath))
+                {
+                   continue;
+                }
+
+                pngContent = exporter.ExportPngAsBase64(pngPath);
             }
 
             if (svg)
@@ -169,11 +192,11 @@ $@"<svg xmlns='http://www.w3.org/2000/svg'
                 exporter.ExportSvg(ch, Path.Combine(outputPath, $"svg/{hex}.svg"));
             }
 
-            exportedChars.Add($"U+{hex.PadLeft(4, '0')} - {ch}");
+            exportedChars.Add(("U+"+hex.PadLeft(4, '0'), pngContent));
         }
 
-        var manifest = string.Join(Environment.NewLine, exportedChars);
-        File.WriteAllText(Path.Combine(outputPath, "manifest.txt"), manifest, Encoding.UTF8);
+        var content = JsonConvert.SerializeObject(exportedChars, Formatting.Indented);
 
+        File.WriteAllText(Path.Combine(outputPath, "font-list.json"), content, Encoding.UTF8);
     }
 }

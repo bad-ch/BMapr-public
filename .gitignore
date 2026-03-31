@@ -34,3 +34,4 @@ BMapr.Map
 /BMapr.publish
 **/GlobalAssemblyInfo.proj
 **/version.json
+/BMapr.GDAL.WebApi/Data/share/fonts/**
