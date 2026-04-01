@@ -1,6 +1,7 @@
 ﻿using SkiaSharp;
 using System.Collections.Generic;
 using System.Text;
+using BMapr.GDAL.WebApi.Models.Map;
 using Newtonsoft.Json;
 
 namespace BMapr.GDAL.WebApi.Services;
@@ -159,7 +160,7 @@ $@"<svg xmlns='http://www.w3.org/2000/svg'
     {
 
         var exporter = new GlyphExporterService(fontFilePath, fontSize, canvasSize);
-        var exportedChars = new List<(string hex, string pngContent)>();
+        var exportedChars = new List<FontCharacterItem>();
 
         for (int cp = 0; cp <= 0x10FFFF; cp++)
         {
@@ -192,7 +193,7 @@ $@"<svg xmlns='http://www.w3.org/2000/svg'
                 exporter.ExportSvg(ch, Path.Combine(outputPath, $"svg/{hex}.svg"));
             }
 
-            exportedChars.Add(("U+"+hex.PadLeft(4, '0'), pngContent));
+            exportedChars.Add(new FontCharacterItem(){Hex = hex, Code = Convert.ToInt32(hex, 16), ImageContent = pngContent});
         }
 
         var content = JsonConvert.SerializeObject(exportedChars, Formatting.Indented);
