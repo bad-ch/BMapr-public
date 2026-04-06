@@ -64,7 +64,7 @@
                   SIZE ##width## ##height##
                   EXTENT 0 0 100 100
                   UNITS METERS
-                  FONTSET ""##share##/font.list"" 
+                  FONTSET ""##share##font.list"" 
 
                   OUTPUTFORMAT
                     NAME ""png""
