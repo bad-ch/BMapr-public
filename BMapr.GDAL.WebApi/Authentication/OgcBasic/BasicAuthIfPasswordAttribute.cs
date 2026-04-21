@@ -33,7 +33,7 @@ namespace BMapr.GDAL.WebApi.Authentication.OgcBasic
 
             var projectSettings = ProjectSettingsService.Get(project, _config);
 
-            if (projectSettings != null && !string.IsNullOrEmpty(projectSettings.BasicAuthenticationUser) && !string.IsNullOrEmpty(projectSettings.BasicAuthenticationPassword) && !_basicAuthenticationHandler.IsAuthenticationSuccessfully(context.HttpContext, projectSettings, out var username))
+            if (projectSettings != null && projectSettings.Users.Any() && !_basicAuthenticationHandler.IsAuthenticationSuccessfully(context.HttpContext, projectSettings, out var username))
             {
                 context.HttpContext.Items["Username"] = username;
                 context.Result = new UnauthorizedResult();

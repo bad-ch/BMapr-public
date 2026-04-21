@@ -8,13 +8,14 @@ namespace BMapr.GDAL.WebApi.Authentication.OgcBasic
     {
         public bool ValidateCredentials(ProjectSettings projectSettings, string username, string password)
         {
-            if (string.IsNullOrEmpty(projectSettings.BasicAuthenticationUser) ||
-                string.IsNullOrEmpty(projectSettings.BasicAuthenticationPassword))
+            var user = projectSettings.Users.SingleOrDefault(x => x.Name == username);
+
+            if (user == null)
             {
                 return false;
             }
 
-            return username == projectSettings.BasicAuthenticationUser && password == projectSettings.BasicAuthenticationPassword;
+            return user.Password == password;
         }
 
         public bool IsAuthenticationSuccessfully(HttpContext context, ProjectSettings projectSettings, out string username)
