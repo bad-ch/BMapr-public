@@ -99,32 +99,6 @@ namespace BMapr.GDAL.WebApi.Controllers
         }
 
         /// <summary>
-        /// Get file as partial stream
-        /// </summary>
-        /// <returns>Deliver Protomap tiles data</returns>
-        [HttpGet("{project}/{file}/pmtiles")]
-        public ActionResult GetPmTile(string project, string file)
-        {
-            var dataPath = Config.DataProject(project);
-            var filePath = Path.Combine(dataPath.FullName, HttpUtility.UrlDecode(file));
-
-            if (!System.IO.File.Exists(filePath))
-            {
-                return NotFound($"file {file} not found");
-            }
-
-            var mimeType = FileService.GetMimeType(filePath);
-            var extension = FileService.GetExtension(filePath);
-
-            if (mimeType == null || extension != ".pmtiles")
-            {
-                return BadRequest($"only pm tiles are supported");
-            }
-
-            return File(new FileStream(filePath,FileMode.Open, FileAccess.Read, FileShare.Read), "application/octet-stream", true);
-        }
-
-        /// <summary>
         /// Get file based GIS data (geojson, kml, ...) and reproject on the fly
         /// </summary>
         /// <param name="project">Name project</param>
