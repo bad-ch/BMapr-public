@@ -26,7 +26,7 @@ _cache
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
 
-
+BMapr.GDAL.WebApi/Data/share/fonts
 /BMapr.GDAL.WebApi/Data/projects
 /BMapr.GDAL.WebApi/Data/tool/postsave
 /BMapr.GDAL.WebApi.Test
