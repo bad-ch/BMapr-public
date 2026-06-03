@@ -1,5 +1,6 @@
 ﻿using BMapr.GDAL.WebApi.Models;
 using BMapr.GDAL.WebApi.Services;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace BMapr.GDAL.WebApi.Authentication.OgcBasic
@@ -15,7 +16,8 @@ namespace BMapr.GDAL.WebApi.Authentication.OgcBasic
                 return false;
             }
 
-            return user.Password == password;
+            var passwordHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(password))).ToLowerInvariant();
+            return user.PasswordHash == passwordHash;
         }
 
         public bool IsAuthenticationSuccessfully(HttpContext context, ProjectSettings projectSettings, out string username)
