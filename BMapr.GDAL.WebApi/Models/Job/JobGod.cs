@@ -17,11 +17,11 @@ namespace BMapr.GDAL.WebApi.Models.Job
             JobPath = Path.Combine(Config.Data.FullName, "jobs");
         }
 
-        public Task Execute(IJobExecutionContext context)
+        public ValueTask Execute(IJobExecutionContext context, CancellationToken cancellationToken)
         {
             var dataMap = context.JobDetail.JobDataMap;
             var jobContent = dataMap.GetString("jobContent");
-            var processId = dataMap.GetIntValue("processId");
+            var processId = dataMap.GetInt("processId");
             var project = dataMap.GetString("project");
 
             if (string.IsNullOrEmpty(jobContent))
@@ -49,7 +49,7 @@ namespace BMapr.GDAL.WebApi.Models.Job
                     Logger.LogError(string.Join(",", resultJob.Exceptions.Select(x => x.Message)));
                 }
                 Logger.LogInformation($"Job canceled because already started, process {processId}");
-                return Task.FromResult(true);
+                return new ValueTask(Task.FromResult(true));
             }
 
             var counter = 0;
@@ -81,7 +81,7 @@ namespace BMapr.GDAL.WebApi.Models.Job
 
             Logger.LogInformation($"GodJob, process id {processId}");
 
-            return Task.FromResult(true);
+            return new ValueTask(Task.FromResult(true));
         }
 
         private DateTime RoundUp(DateTime dt, TimeSpan d)

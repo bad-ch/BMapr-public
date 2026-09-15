@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using Quartz;
-using Quartz.Impl.Matchers;
+using Quartz.Util;
 
 namespace BMapr.GDAL.WebApi.Controllers
 {
@@ -24,32 +24,27 @@ namespace BMapr.GDAL.WebApi.Controllers
         public async Task<IActionResult> List()
         {
             var scheduler = await _factory.GetScheduler();
-            var allTriggerKeys = scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup());
+            var allTriggerKeys = await scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup());
             var jobsInfo = new List<object>();
 
-            foreach (var triggerKey in allTriggerKeys.Result)
+            foreach (var triggerKey in allTriggerKeys)
             {
-                var triggerDetails = scheduler.GetTrigger(triggerKey);
+                var triggerDetails = await scheduler.GetTrigger(triggerKey);
 
-                if (triggerDetails?.Result?.JobKey == null)
+                if (triggerDetails?.JobKey == null)
                 {
                     continue;
                 }
 
-                var jobDetails = scheduler.GetJobDetail(triggerDetails.Result?.JobKey);
+                var jobDetails = await scheduler.GetJobDetail(triggerDetails.JobKey);
 
                 jobsInfo.Add(new
                 {
-                    TriggerKey = triggerDetails.Result.Key.Name, 
-                    JobKey = triggerDetails.Result.JobKey.Name,
-                    triggerDetails.IsCompleted,
-                    triggerDetails.IsCompletedSuccessfully,
-                    triggerDetails.Status,
-                    triggerDetails.Result.StartTimeUtc,
-                    triggerDetails.Result.EndTimeUtc,
-                    triggerDetails.Result.FinalFireTimeUtc,
-                    nextFire = triggerDetails.Result.GetNextFireTimeUtc(),
-                    lastFire = triggerDetails.Result.GetPreviousFireTimeUtc()
+                    TriggerKey = triggerDetails.Key.Name, 
+                    JobKey = triggerDetails.JobKey.Name,
+                    triggerDetails.StartTimeUtc,
+                    triggerDetails.EndTimeUtc,
+                    triggerDetails.FinalFireTimeUtc
                 });
             }
 

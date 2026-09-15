@@ -3,29 +3,26 @@ using BMapr.GDAL.WebApi.Services.Jobs;
 using Newtonsoft.Json;
 using Quartz;
 using System.Diagnostics;
-using static Quartz.Logging.OperationName;
 
 namespace BMapr.GDAL.WebApi.Models.Job
 {
     public class JobEngine : IJob
     {
         private readonly ILogger<JobEngine> Logger;
-        private readonly ISchedulerFactory Factory;
         private readonly IConfiguration IConfig;
         public readonly Config Config;
 
-        public JobEngine(ILogger<JobEngine> logger, ISchedulerFactory factory, IConfiguration iConfig, IWebHostEnvironment environment)
+        public JobEngine(ILogger<JobEngine> logger, IConfiguration iConfig, IWebHostEnvironment environment)
         {
             Logger = logger;
-            Factory = factory;
             IConfig = iConfig;
             Config = ConfigService.Get(iConfig, environment);
         }
 
-        public Task Execute(IJobExecutionContext context)
+        public ValueTask Execute(IJobExecutionContext context, CancellationToken cancellationToken)
         {
             var dataMap = context.JobDetail.JobDataMap;
-            var processId = dataMap.GetIntValue("processId");
+            var processId = dataMap.GetInt("processId");
 
             Logger.LogInformation($"*** Ini Jobs for all projects, process id {processId}");
 
@@ -41,7 +38,7 @@ namespace BMapr.GDAL.WebApi.Models.Job
                 Logger.LogInformation($"***********************************************************************");
                 Logger.LogInformation($"**** Job-Engine is DISABLED");
                 Logger.LogInformation($"***********************************************************************");
-                return Task.FromResult(true);
+                return new ValueTask(Task.FromResult(true));
             }
             else
             {
@@ -68,16 +65,15 @@ namespace BMapr.GDAL.WebApi.Models.Job
                         continue;
                     }
 
-                    AddJob(project, job, jobContent);
+                    AddJob(project, job, jobContent, context.Scheduler);
                 }
             }
 
-            return Task.FromResult(true);
+            return new ValueTask(Task.FromResult(true));
         }
 
-        public async void AddJob(string project, Job job, string jobContent)
+        public async void AddJob(string project, Job job, string jobContent, IScheduler scheduler)
         {
-            var scheduler = await Factory.GetScheduler();
             var currentProcess = Process.GetCurrentProcess();
 
             IJobDetail jobDetail = JobBuilder.Create<JobGod>()

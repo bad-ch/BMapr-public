@@ -3,7 +3,6 @@ using BMapr.GDAL.WebApi.Authentication.Base;
 using BMapr.GDAL.WebApi.Models.Job;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.OpenApi.Models;
 using OSGeo.GDAL;
 using OSGeo.MapServer;
 using OSGeo.OGR;
@@ -21,10 +20,18 @@ using System.Reflection;
 //GdalConfiguration.ConfigureGdal();
 //GdalConfiguration.ConfigureOgr();
 
-var path = GdalConfiguration.IniPath();
-Gdal.AllRegister();
-Ogr.RegisterAll();
-mapscript.SetEnvironmentVariable(path);
+try
+{
+    var path = GdalConfiguration.IniPath();
+    Gdal.AllRegister();
+    Ogr.RegisterAll();
+    mapscript.SetEnvironmentVariable(path);
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Failed to initialize GDAL/OGR components");
+    throw;
+}
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,10 +43,22 @@ if (args.Any(x => x.ToLower().StartsWith("port=")))
     if (int.TryParse(portString, out port))
     {
         Console.WriteLine($"use port {port}");
-        builder.WebHost.ConfigureKestrel((context, serverOptions) =>
+        try
         {
-            serverOptions.Listen(IPAddress.Any, port);
-        });
+            builder.WebHost.ConfigureKestrel((context, serverOptions) =>
+            {
+                serverOptions.Listen(IPAddress.Any, port);
+            });
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Failed to configure Kestrel on port {Port}", port);
+            throw;
+        }
+    }
+    else
+    {
+        Log.Warning("Invalid port number provided: {PortString}", portString);
     }
 }
 
@@ -47,11 +66,11 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
-    options.SwaggerDoc("v1", new OpenApiInfo
+    options.SwaggerDoc("v1", new()
     {
         Version = "v1",
         Title = "BMapr",
-        Description = ".Net 9 Web API, provide OGC service interface and other helpers based on GDAL/OGR MapServer, for example add WMTS and WFS-T functionality",
+        Description = ".Net 10 Web API, provide OGC service interface and other helpers based on GDAL/OGR MapServer, for example add WMTS and WFS-T functionality",
     });
 
     var xmlFilename = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
@@ -74,7 +93,10 @@ builder.Logging.AddSerilog(logger);
 
 var service = builder.Services.AddQuartz(q =>
 {
-    q.UseMicrosoftDependencyInjectionJobFactory();
+    q.UseDefaultThreadPool(tp =>
+    {
+        tp.MaxConcurrency = 10;
+    });
 
     var jobKey = new JobKey("JobEngine");
     var currentProcess = Process.GetCurrentProcess();
@@ -87,7 +109,7 @@ var service = builder.Services.AddQuartz(q =>
         .StartNow());
 });
 
-builder.Services.AddQuartzServer(options =>
+builder.Services.AddQuartzHostedService(options =>
 {
     options.WaitForJobsToComplete = true;
 });
@@ -102,33 +124,41 @@ var app = builder.Build();
 
 ServiceLocator.ServiceProvider = app.Services;
 
-app.UseSwagger();
-app.UseSwaggerUI(options =>
+try
 {
-    options.InjectStylesheet($"{configValue}/swagger-ui/custom.css");
-    options.InjectJavascript($"{configValue}/swagger-ui/custom.js");
-});
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.InjectStylesheet($"{configValue}/swagger-ui/custom.css");
+        options.InjectJavascript($"{configValue}/swagger-ui/custom.js");
+    });
 
-app.UseHttpsRedirection();
-app.UseStaticFiles();
+    app.UseHttpsRedirection();
+    app.UseStaticFiles();
 
-app.UseAuthorization();
+    app.UseAuthorization();
 
-app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=Home}/{action=Index}");
+    app.MapControllerRoute(
+        name: "default",
+        pattern: "{controller=Home}/{action=Index}");
 
-app.MapControllers();
+    app.MapControllers();
 
-app.UseCors(x => x
-    .AllowAnyOrigin()
-    .AllowAnyMethod()
-    .AllowAnyHeader());
+    app.UseCors(x => x
+        .AllowAnyOrigin()
+        .AllowAnyMethod()
+        .AllowAnyHeader());
 
-app.Lifetime.ApplicationStarted.Register(OnStarted);
-app.Lifetime.ApplicationStopped.Register(OnStopped);
+    app.Lifetime.ApplicationStarted.Register(OnStarted);
+    app.Lifetime.ApplicationStopped.Register(OnStopped);
 
-app.Run();
+    app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application terminated unexpectedly");
+    throw;
+}
 
 void OnStarted()
 {
