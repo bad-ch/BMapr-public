@@ -150,6 +150,7 @@ namespace BMapr.GDAL.WebApi.Services
             {
                 _logger?.LogError($"Insert, {ex.Message}");
                 transaction.Rollback();
+                throw ex;
             }
         }
 
@@ -197,6 +198,7 @@ namespace BMapr.GDAL.WebApi.Services
             {
                 _logger?.LogError($"Update, {ex.Message}");
                 transaction.Rollback();
+                throw ex;
             }
         }
 
@@ -234,6 +236,7 @@ namespace BMapr.GDAL.WebApi.Services
             {
                 _logger?.LogError($"Delete, {ex.Message}");
                 transaction.Rollback();
+                throw ex;
             }
         }
 
