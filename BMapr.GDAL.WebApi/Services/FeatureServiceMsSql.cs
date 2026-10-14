@@ -305,6 +305,16 @@ namespace BMapr.GDAL.WebApi.Services
                             properties.Add(GetFieldValue(field, column.Value == null ? "NULL" : $"'{column.Value}'"));
                             break;
                         case "System.Boolean":
+                            if (column.Value == null)
+                            {
+                                properties.Add(GetFieldValue(field, "NULL"));
+                            }
+                            else
+                            {
+                                var boolValue = Convert.ToBoolean(column.Value);
+                                properties.Add(GetFieldValue(field, boolValue ? "1" : "0"));
+                            }
+                            break;
                         case "System.Byte":
                         case "System.SByte":
                         case "System.Decimal":
@@ -325,6 +335,21 @@ namespace BMapr.GDAL.WebApi.Services
                             break;
                         case "System.DateTimeOffset":
                             properties.Add(GetFieldValue(field, column.Value == null ? "NULL" : $"CAST('{column.Value}' AS DATETIMEOFFSET)"));
+                            break;
+                        case "System.Byte[]":
+                            if (column.Value == null)
+                            {
+                                properties.Add(GetFieldValue(field, "NULL"));
+                            }
+                            else if (column.Value is byte[] binaryData)
+                            {
+                                var hexString = "0x" + string.Concat(binaryData.Select(b => b.ToString("X2")));
+                                properties.Add(GetFieldValue(field, hexString));
+                            }
+                            else
+                            {
+                                properties.Add(GetFieldValue(field, "NULL"));
+                            }
                             break;
                         default:
                             throw new Exception($"Type not found {field.Name}");
