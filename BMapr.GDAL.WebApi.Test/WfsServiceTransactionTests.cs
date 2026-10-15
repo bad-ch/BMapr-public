@@ -173,6 +173,117 @@ namespace BMapr.GDAL.WebApi.Test
         /// <summary>
         /// Verifies if a record with a specific name pattern exists in the database
         /// </summary>
+        /// <summary>
+        /// Queries the database to get feature ID by Name
+        /// Returns the ID of the first matching record
+        /// </summary>
+        private static long QueryFeatureIdByName(string nameValue)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(ConnectionString))
+                {
+                    connection.Open();
+                    using (var command = new SqlCommand(
+                        "SELECT TOP 1 [Id] FROM dbo.SpatialFeature WHERE [Name] = @Name ORDER BY [Id] DESC",
+                        connection))
+                    {
+                        command.Parameters.AddWithValue("@Name", nameValue);
+                        var result = command.ExecuteScalar();
+                        if (result != null)
+                        {
+                            return Convert.ToInt64(result);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error querying feature ID: {ex.Message}");
+            }
+            return -1;
+        }
+
+        /// <summary>
+        /// Creates a WFS 1.1.0 Update transaction XML request with correct schema structure
+        /// Filter contains a single FeatureId element with fid attribute
+        /// </summary>
+        private string CreateUpdateTransactionRequest(long featureId, Dictionary<string, object> propertyUpdates, string layerName = "SpatialFeature")
+        {
+            var xml = new System.Text.StringBuilder();
+            xml.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+            xml.AppendLine("<Transaction service=\"WFS\" version=\"1.1.0\"");
+            xml.AppendLine("  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"");
+            xml.AppendLine("  xmlns=\"http://www.opengis.net/wfs\"");
+            xml.AppendLine("  xmlns:ogc=\"http://www.opengis.net/ogc\"");
+            xml.AppendLine("  xmlns:gml=\"http://www.opengis.net/gml\"");
+            xml.AppendLine("  xsi:schemaLocation=\"http://www.opengis.net/wfs http://schemas.opengis.net/wfs/1.1.0/wfs.xsd\">");
+
+            xml.AppendLine($"  <Update typeName=\"{layerName}\">");
+
+            // Add Property elements
+            foreach (var propertyUpdate in propertyUpdates)
+            {
+                xml.AppendLine("    <Property>");
+                xml.AppendLine($"      <Name>{propertyUpdate.Key}</Name>");
+
+                // Value handling
+                if (propertyUpdate.Value == null)
+                {
+                    xml.AppendLine("      <Value></Value>");
+                }
+                else if (propertyUpdate.Value is bool boolValue)
+                {
+                    xml.AppendLine($"      <Value>{(boolValue ? "true" : "false")}</Value>");
+                }
+                else if (propertyUpdate.Value is byte[] binaryValue)
+                {
+                    var hexString = Convert.ToHexString(binaryValue);
+                    xml.AppendLine($"      <Value>{hexString}</Value>");
+                }
+                else
+                {
+                    var stringValue = propertyUpdate.Value.ToString();
+                    xml.AppendLine($"      <Value>{System.Net.WebUtility.HtmlEncode(stringValue)}</Value>");
+                }
+
+                xml.AppendLine("    </Property>");
+            }
+
+            // Add Filter with FeatureId - single Filter element containing FeatureId
+            xml.AppendLine("    <Filter>");
+            xml.AppendLine($"      <FeatureId fid=\"{layerName}.{featureId}\"/>");
+            xml.AppendLine("    </Filter>");
+
+            xml.AppendLine("  </Update>");
+            xml.AppendLine("</Transaction>");
+            return xml.ToString();
+        }
+
+        /// <summary>
+        /// Creates a WFS 1.1.0 Delete transaction XML request with correct schema structure
+        /// Filter array contains FeatureId elements with fid attributes
+        /// </summary>
+        private string CreateDeleteTransactionRequest(long featureId, string layerName = "SpatialFeature")
+        {
+            var xml = new System.Text.StringBuilder();
+            xml.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+            xml.AppendLine("<Transaction service=\"WFS\" version=\"1.1.0\"");
+            xml.AppendLine("  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"");
+            xml.AppendLine("  xmlns=\"http://www.opengis.net/wfs\"");
+            xml.AppendLine("  xmlns:ogc=\"http://www.opengis.net/ogc\"");
+            xml.AppendLine("  xmlns:gml=\"http://www.opengis.net/gml\"");
+            xml.AppendLine("  xsi:schemaLocation=\"http://www.opengis.net/wfs http://schemas.opengis.net/wfs/1.1.0/wfs.xsd\">");
+
+            xml.AppendLine($"  <Delete typeName=\"{layerName}\">");
+            xml.AppendLine("    <Filter>");
+            xml.AppendLine($"      <FeatureId fid=\"{layerName}.{featureId}\"/>");
+            xml.AppendLine("    </Filter>");
+            xml.AppendLine("  </Delete>");
+            xml.AppendLine("</Transaction>");
+            return xml.ToString();
+        }
+
         private static bool VerifyRecordExists(string namePattern)
         {
             try
@@ -304,6 +415,40 @@ namespace BMapr.GDAL.WebApi.Test
 
                 // Verify records were actually inserted to database
                 Assert.IsTrue(VerifyRecordExists("StringTest"), "String test records should exist in database after transaction.");
+
+                // UPDATE: Modify the first inserted record
+                var featureId = QueryFeatureIdByName("StringTest1");
+                Assert.IsTrue(featureId > 0, "Should successfully query inserted feature ID");
+
+                var updateProperties = new Dictionary<string, object>()
+                {
+                    { "Description", "UPDATED: This is an updated description" },
+                    { "Category", "UpdatedCategory" }
+                };
+                var updateXml = CreateUpdateTransactionRequest(featureId, updateProperties, "SpatialFeature");
+                Assert.IsNotNull(updateXml, "Update transaction XML should be created");
+
+                var updateResult = WfsService.TransactionCore(updateXml, mapConfig, config, "TestProject", null);
+                Assert.IsNotNull(updateResult, "Update result should not be null");
+                Assert.IsInstanceOfType(updateResult, typeof(ContentResult), "Update result should be ContentResult");
+
+                var updateContentResult = updateResult as ContentResult;
+                Assert.AreEqual(200, updateContentResult.StatusCode, "Update should have 200 status code");
+                Assert.IsTrue(updateContentResult.Content.Contains("TransactionResponse"), "Update result should contain TransactionResponse");
+                Assert.IsTrue(updateContentResult.Content.Contains("totalUpdated"), "Update result should indicate updated features");
+
+                // DELETE: Remove the updated record
+                var deleteXml = CreateDeleteTransactionRequest(featureId, "SpatialFeature");
+                Assert.IsNotNull(deleteXml, "Delete transaction XML should be created");
+
+                var deleteResult = WfsService.TransactionCore(deleteXml, mapConfig, config, "TestProject", null);
+                Assert.IsNotNull(deleteResult, "Delete result should not be null");
+                Assert.IsInstanceOfType(deleteResult, typeof(ContentResult), "Delete result should be ContentResult");
+
+                var deleteContentResult = deleteResult as ContentResult;
+                Assert.AreEqual(200, deleteContentResult.StatusCode, "Delete should have 200 status code");
+                Assert.IsTrue(deleteContentResult.Content.Contains("TransactionResponse"), "Delete result should contain TransactionResponse");
+                Assert.IsTrue(deleteContentResult.Content.Contains("totalDeleted"), "Delete result should indicate deleted features");
             }
             catch (Exception ex)
             {
@@ -373,6 +518,38 @@ namespace BMapr.GDAL.WebApi.Test
                 Assert.AreEqual(200, contentResult.StatusCode, "Result should have 200 status code");
                 Assert.IsTrue(contentResult.Content.Contains("TransactionResponse"), "Result should contain TransactionResponse");
                 Assert.IsTrue(VerifyRecordExists("Parcel 1"), "Integer test records should exist.");
+
+                // UPDATE: Modify the first inserted record
+                var featureId = QueryFeatureIdByName("Parcel 1");
+                Assert.IsTrue(featureId > 0, "Should successfully query inserted feature ID");
+
+                var updateProperties = new Dictionary<string, object>()
+                {
+                    { "IntValue", 999999 },
+                    { "BigIntValue", 9999999999L }
+                };
+                var updateXml = CreateUpdateTransactionRequest(featureId, updateProperties, "SpatialFeature");
+                Assert.IsNotNull(updateXml, "Update transaction XML should be created");
+
+                var updateResult = WfsService.TransactionCore(updateXml, mapConfig, config, "TestProject", null);
+                Assert.IsNotNull(updateResult, "Update result should not be null");
+                Assert.IsInstanceOfType(updateResult, typeof(ContentResult), "Update result should be ContentResult");
+
+                var updateContentResult = updateResult as ContentResult;
+                Assert.AreEqual(200, updateContentResult.StatusCode, "Update should have 200 status code");
+                Assert.IsTrue(updateContentResult.Content.Contains("totalUpdated"), "Update result should indicate updated features");
+
+                // DELETE: Remove the updated record
+                var deleteXml = CreateDeleteTransactionRequest(featureId, "SpatialFeature");
+                Assert.IsNotNull(deleteXml, "Delete transaction XML should be created");
+
+                var deleteResult = WfsService.TransactionCore(deleteXml, mapConfig, config, "TestProject", null);
+                Assert.IsNotNull(deleteResult, "Delete result should not be null");
+                Assert.IsInstanceOfType(deleteResult, typeof(ContentResult), "Delete result should be ContentResult");
+
+                var deleteContentResult = deleteResult as ContentResult;
+                Assert.AreEqual(200, deleteContentResult.StatusCode, "Delete should have 200 status code");
+                Assert.IsTrue(deleteContentResult.Content.Contains("totalDeleted"), "Delete result should indicate deleted features");
             }
             catch (Exception ex)
             {
@@ -453,6 +630,38 @@ namespace BMapr.GDAL.WebApi.Test
                 Assert.AreEqual(200, contentResult.StatusCode, "Result should have 200 status code");
                 Assert.IsTrue(contentResult.Content.Contains("TransactionResponse"), "Result should contain TransactionResponse");
                 Assert.IsTrue(VerifyRecordExists("DecimalPositiveTest"), "Decimal test records should exist.");
+
+                // UPDATE: Modify the first inserted record
+                var featureId = QueryFeatureIdByName("DecimalPositiveTest");
+                Assert.IsTrue(featureId > 0, "Should successfully query inserted feature ID");
+
+                var updateProperties = new Dictionary<string, object>()
+                {
+                    { "DecimalValue", 99999.9999m },
+                    { "FloatValue", 9999.99999 }
+                };
+                var updateXml = CreateUpdateTransactionRequest(featureId, updateProperties, "SpatialFeature");
+                Assert.IsNotNull(updateXml, "Update transaction XML should be created");
+
+                var updateResult = WfsService.TransactionCore(updateXml, mapConfig, config, "TestProject", null);
+                Assert.IsNotNull(updateResult, "Update result should not be null");
+                Assert.IsInstanceOfType(updateResult, typeof(ContentResult), "Update result should be ContentResult");
+
+                var updateContentResult = updateResult as ContentResult;
+                Assert.AreEqual(200, updateContentResult.StatusCode, "Update should have 200 status code");
+                Assert.IsTrue(updateContentResult.Content.Contains("totalUpdated"), "Update result should indicate updated features");
+
+                // DELETE: Remove the updated record
+                var deleteXml = CreateDeleteTransactionRequest(featureId, "SpatialFeature");
+                Assert.IsNotNull(deleteXml, "Delete transaction XML should be created");
+
+                var deleteResult = WfsService.TransactionCore(deleteXml, mapConfig, config, "TestProject", null);
+                Assert.IsNotNull(deleteResult, "Delete result should not be null");
+                Assert.IsInstanceOfType(deleteResult, typeof(ContentResult), "Delete result should be ContentResult");
+
+                var deleteContentResult = deleteResult as ContentResult;
+                Assert.AreEqual(200, deleteContentResult.StatusCode, "Delete should have 200 status code");
+                Assert.IsTrue(deleteContentResult.Content.Contains("totalDeleted"), "Delete result should indicate deleted features");
             }
             catch (Exception ex)
             {
@@ -518,6 +727,37 @@ namespace BMapr.GDAL.WebApi.Test
                 Assert.AreEqual(200, contentResult.StatusCode, "Result should have 200 status code");
                 Assert.IsTrue(contentResult.Content.Contains("TransactionResponse"), "Result should contain TransactionResponse");
                 Assert.IsTrue(VerifyRecordExists("BooleanTrueTest"), "Boolean test records should exist.");
+
+                // UPDATE: Modify the first inserted record
+                var featureId = QueryFeatureIdByName("BooleanTrueTest");
+                Assert.IsTrue(featureId > 0, "Should successfully query inserted feature ID");
+
+                var updateProperties = new Dictionary<string, object>()
+                {
+                    { "BooleanValue", false }
+                };
+                var updateXml = CreateUpdateTransactionRequest(featureId, updateProperties, "SpatialFeature");
+                Assert.IsNotNull(updateXml, "Update transaction XML should be created");
+
+                var updateResult = WfsService.TransactionCore(updateXml, mapConfig, config, "TestProject", null);
+                Assert.IsNotNull(updateResult, "Update result should not be null");
+                Assert.IsInstanceOfType(updateResult, typeof(ContentResult), "Update result should be ContentResult");
+
+                var updateContentResult = updateResult as ContentResult;
+                Assert.AreEqual(200, updateContentResult.StatusCode, "Update should have 200 status code");
+                Assert.IsTrue(updateContentResult.Content.Contains("totalUpdated"), "Update result should indicate updated features");
+
+                // DELETE: Remove the updated record
+                var deleteXml = CreateDeleteTransactionRequest(featureId, "SpatialFeature");
+                Assert.IsNotNull(deleteXml, "Delete transaction XML should be created");
+
+                var deleteResult = WfsService.TransactionCore(deleteXml, mapConfig, config, "TestProject", null);
+                Assert.IsNotNull(deleteResult, "Delete result should not be null");
+                Assert.IsInstanceOfType(deleteResult, typeof(ContentResult), "Delete result should be ContentResult");
+
+                var deleteContentResult = deleteResult as ContentResult;
+                Assert.AreEqual(200, deleteContentResult.StatusCode, "Delete should have 200 status code");
+                Assert.IsTrue(deleteContentResult.Content.Contains("totalDeleted"), "Delete result should indicate deleted features");
             }
             catch (Exception ex)
             {
@@ -594,6 +834,38 @@ namespace BMapr.GDAL.WebApi.Test
                 Assert.AreEqual(200, contentResult.StatusCode, "Result should have 200 status code");
                 Assert.IsTrue(contentResult.Content.Contains("TransactionResponse"), "Result should contain TransactionResponse");
                 Assert.IsTrue(VerifyRecordExists("Parcel 2"), "DateTime test records should exist after transaction.");
+
+                // UPDATE: Modify the first inserted record
+                var featureId = QueryFeatureIdByName("Parcel 2");
+                Assert.IsTrue(featureId > 0, "Should successfully query inserted feature ID");
+
+                var updateProperties = new Dictionary<string, object>()
+                {
+                    { "DateValue", "2025-06-20" },
+                    { "DateTimeValue", "2025-06-20 12:00:00" }
+                };
+                var updateXml = CreateUpdateTransactionRequest(featureId, updateProperties, "SpatialFeature");
+                Assert.IsNotNull(updateXml, "Update transaction XML should be created");
+
+                var updateResult = WfsService.TransactionCore(updateXml, mapConfig, config, "TestProject", null);
+                Assert.IsNotNull(updateResult, "Update result should not be null");
+                Assert.IsInstanceOfType(updateResult, typeof(ContentResult), "Update result should be ContentResult");
+
+                var updateContentResult = updateResult as ContentResult;
+                Assert.AreEqual(200, updateContentResult.StatusCode, "Update should have 200 status code");
+                Assert.IsTrue(updateContentResult.Content.Contains("totalUpdated"), "Update result should indicate updated features");
+
+                // DELETE: Remove the updated record
+                var deleteXml = CreateDeleteTransactionRequest(featureId, "SpatialFeature");
+                Assert.IsNotNull(deleteXml, "Delete transaction XML should be created");
+
+                var deleteResult = WfsService.TransactionCore(deleteXml, mapConfig, config, "TestProject", null);
+                Assert.IsNotNull(deleteResult, "Delete result should not be null");
+                Assert.IsInstanceOfType(deleteResult, typeof(ContentResult), "Delete result should be ContentResult");
+
+                var deleteContentResult = deleteResult as ContentResult;
+                Assert.AreEqual(200, deleteContentResult.StatusCode, "Delete should have 200 status code");
+                Assert.IsTrue(deleteContentResult.Content.Contains("totalDeleted"), "Delete result should indicate deleted features");
             }
             catch (Exception ex)
             {
@@ -670,6 +942,40 @@ namespace BMapr.GDAL.WebApi.Test
                 Assert.AreEqual(200, contentResult.StatusCode, "Result should have 200 status code");
                 Assert.IsTrue(contentResult.Content.Contains("TransactionResponse"), "Result should contain TransactionResponse");
                 Assert.IsTrue(VerifyRecordExists("GuidBinaryTest1"), "Guid/Binary test records should exist.");
+
+                // UPDATE: Modify the first inserted record
+                var featureId = QueryFeatureIdByName("GuidBinaryTest1");
+                Assert.IsTrue(featureId > 0, "Should successfully query inserted feature ID");
+
+                var newGuid = Guid.NewGuid();
+                var newBinaryData = new byte[] { 0x11, 0x22, 0x33, 0x44, 0x55 };
+                var updateProperties = new Dictionary<string, object>()
+                {
+                    { "UniqueValue", newGuid },
+                    { "BinaryValue", newBinaryData }
+                };
+                var updateXml = CreateUpdateTransactionRequest(featureId, updateProperties, "SpatialFeature");
+                Assert.IsNotNull(updateXml, "Update transaction XML should be created");
+
+                var updateResult = WfsService.TransactionCore(updateXml, mapConfig, config, "TestProject", null);
+                Assert.IsNotNull(updateResult, "Update result should not be null");
+                Assert.IsInstanceOfType(updateResult, typeof(ContentResult), "Update result should be ContentResult");
+
+                var updateContentResult = updateResult as ContentResult;
+                Assert.AreEqual(200, updateContentResult.StatusCode, "Update should have 200 status code");
+                Assert.IsTrue(updateContentResult.Content.Contains("totalUpdated"), "Update result should indicate updated features");
+
+                // DELETE: Remove the updated record
+                var deleteXml = CreateDeleteTransactionRequest(featureId, "SpatialFeature");
+                Assert.IsNotNull(deleteXml, "Delete transaction XML should be created");
+
+                var deleteResult = WfsService.TransactionCore(deleteXml, mapConfig, config, "TestProject", null);
+                Assert.IsNotNull(deleteResult, "Delete result should not be null");
+                Assert.IsInstanceOfType(deleteResult, typeof(ContentResult), "Delete result should be ContentResult");
+
+                var deleteContentResult = deleteResult as ContentResult;
+                Assert.AreEqual(200, deleteContentResult.StatusCode, "Delete should have 200 status code");
+                Assert.IsTrue(deleteContentResult.Content.Contains("totalDeleted"), "Delete result should indicate deleted features");
             }
             catch (Exception ex)
             {
@@ -727,6 +1033,37 @@ namespace BMapr.GDAL.WebApi.Test
                 Assert.AreEqual(200, contentResult.StatusCode, "Result should have 200 status code");
                 Assert.IsTrue(contentResult.Content.Contains("TransactionResponse"), "Result should contain TransactionResponse");
                 Assert.IsTrue(VerifyRecordExists("SimpleRecord1"), "Simple test records should be inserted successfully.");
+
+                // UPDATE: Modify the first inserted record
+                var featureId = QueryFeatureIdByName("SimpleRecord1");
+                Assert.IsTrue(featureId > 0, "Should successfully query inserted feature ID");
+
+                var updateProperties = new Dictionary<string, object>()
+                {
+                    { "Description", "UPDATED: First simple record" }
+                };
+                var updateXml = CreateUpdateTransactionRequest(featureId, updateProperties, "SpatialFeature");
+                Assert.IsNotNull(updateXml, "Update transaction XML should be created");
+
+                var updateResult = WfsService.TransactionCore(updateXml, mapConfig, config, "TestProject", null);
+                Assert.IsNotNull(updateResult, "Update result should not be null");
+                Assert.IsInstanceOfType(updateResult, typeof(ContentResult), "Update result should be ContentResult");
+
+                var updateContentResult = updateResult as ContentResult;
+                Assert.AreEqual(200, updateContentResult.StatusCode, "Update should have 200 status code");
+                Assert.IsTrue(updateContentResult.Content.Contains("totalUpdated"), "Update result should indicate updated features");
+
+                // DELETE: Remove the updated record
+                var deleteXml = CreateDeleteTransactionRequest(featureId, "SpatialFeature");
+                Assert.IsNotNull(deleteXml, "Delete transaction XML should be created");
+
+                var deleteResult = WfsService.TransactionCore(deleteXml, mapConfig, config, "TestProject", null);
+                Assert.IsNotNull(deleteResult, "Delete result should not be null");
+                Assert.IsInstanceOfType(deleteResult, typeof(ContentResult), "Delete result should be ContentResult");
+
+                var deleteContentResult = deleteResult as ContentResult;
+                Assert.AreEqual(200, deleteContentResult.StatusCode, "Delete should have 200 status code");
+                Assert.IsTrue(deleteContentResult.Content.Contains("totalDeleted"), "Delete result should indicate deleted features");
             }
             catch (Exception ex)
             {
@@ -791,6 +1128,44 @@ namespace BMapr.GDAL.WebApi.Test
                 Assert.AreEqual(200, contentResult.StatusCode, "Result should have 200 status code");
                 Assert.IsTrue(contentResult.Content.Contains("TransactionResponse"), "Result should contain TransactionResponse");
                 Assert.IsTrue(VerifyRecordExists("Parcel 3"), "Comprehensive mixed test record should exist.");
+
+                // UPDATE: Modify the inserted record
+                var featureId = QueryFeatureIdByName("Parcel 3");
+                Assert.IsTrue(featureId > 0, "Should successfully query inserted feature ID");
+
+                var newDateStr = "2025-12-25";
+                var newDateTimeStr = "2025-12-25 18:00:00";
+                var updateProperties = new Dictionary<string, object>()
+                {
+                    { "Description", "UPDATED: Comprehensive test with all data types" },
+                    { "Category", "UpdatedMixed" },
+                    { "IntValue", 999 },
+                    { "BooleanValue", false },
+                    { "DateValue", newDateStr },
+                    { "DateTimeValue", newDateTimeStr }
+                };
+                var updateXml = CreateUpdateTransactionRequest(featureId, updateProperties, "SpatialFeature");
+                Assert.IsNotNull(updateXml, "Update transaction XML should be created");
+
+                var updateResult = WfsService.TransactionCore(updateXml, mapConfig, config, "TestProject", null);
+                Assert.IsNotNull(updateResult, "Update result should not be null");
+                Assert.IsInstanceOfType(updateResult, typeof(ContentResult), "Update result should be ContentResult");
+
+                var updateContentResult = updateResult as ContentResult;
+                Assert.AreEqual(200, updateContentResult.StatusCode, "Update should have 200 status code");
+                Assert.IsTrue(updateContentResult.Content.Contains("totalUpdated"), "Update result should indicate updated features");
+
+                // DELETE: Remove the updated record
+                var deleteXml = CreateDeleteTransactionRequest(featureId, "SpatialFeature");
+                Assert.IsNotNull(deleteXml, "Delete transaction XML should be created");
+
+                var deleteResult = WfsService.TransactionCore(deleteXml, mapConfig, config, "TestProject", null);
+                Assert.IsNotNull(deleteResult, "Delete result should not be null");
+                Assert.IsInstanceOfType(deleteResult, typeof(ContentResult), "Delete result should be ContentResult");
+
+                var deleteContentResult = deleteResult as ContentResult;
+                Assert.AreEqual(200, deleteContentResult.StatusCode, "Delete should have 200 status code");
+                Assert.IsTrue(deleteContentResult.Content.Contains("totalDeleted"), "Delete result should indicate deleted features");
             }
             catch (Exception ex)
             {
