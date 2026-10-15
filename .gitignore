@@ -33,3 +33,6 @@ BMapr.GDAL.WebApi/Data/share/fonts
 /BMapr.publish
 **/GlobalAssemblyInfo.proj
 **/version.json
+
+!/BMapr.GDAL.WebApi.Test/WfsServiceTransactionTests.cs
+!/BMapr.GDAL.WebApi.Test/FeatureServiceMsSqlTests.cs
