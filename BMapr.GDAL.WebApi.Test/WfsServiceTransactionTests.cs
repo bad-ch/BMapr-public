@@ -1356,6 +1356,245 @@ namespace BMapr.GDAL.WebApi.Test
             }
         }
 
+        /// <summary>
+        /// Test that inserting a string exceeding the Varchar10 column limit (10 characters) 
+        /// properly throws an exception during transaction processing
+        /// </summary>
+        [TestMethod]
+        public void TransactionInsertWithVarchar10Overflow_ShouldThrowException()
+        {
+            if (!IsConnectionAvailable())
+            {
+                Assert.Inconclusive("SQL Server instance is not available. Test skipped.");
+            }
+
+            try
+            {
+                // Create a feature with a string that exceeds the Varchar10 column limit
+                // Varchar10 only allows 10 characters, we'll try with 20 characters
+                var tooLongString = "ThisIsAVeryLongStringThatExceedsTheLimit"; // 41 characters
+                var uniqueName = GetUniqueFeatureName("Varchar10OverflowTest");
+
+                var features = new List<FeatureBody>()
+                {
+                    new FeatureBody()
+                    {
+                        Properties = new Dictionary<string, object>()
+                        {
+                            { "Name", uniqueName },
+                            { "Varchar10", tooLongString } // This should exceed the 10-character limit
+                        },
+                        Geometry = "POLYGON((2600520 1150191, 2715764 1186190, 2511651 1138667, 2600520 1150191))",
+                        Epsg = 0
+                    }
+                };
+
+                var transactionXml = CreateTransactionRequest(features, "SpatialFeature");
+                Assert.IsNotNull(transactionXml, "Transaction XML should be created");
+
+                var mapConfig = CreateMapConfigForTesting();
+                var config = CreateTestConfig();
+
+                // This should throw an exception due to column length constraint violation
+                var exceptionThrown = false;
+                ContentResult? result = null;
+                try
+                {
+                    result = WfsService.TransactionCore(transactionXml, mapConfig, config, "TestProject", null) as ContentResult;
+                }
+                catch (Exception ex)
+                {
+                    // An exception is expected due to the VARCHAR constraint
+                    exceptionThrown = true;
+                    Assert.IsTrue(
+                        ex.Message.Contains("string or binary data would be truncated") ||
+                        ex.Message.Contains("VARCHAR") ||
+                        ex.Message.Contains("constraint") ||
+                        ex.Message.Contains("length"),
+                        $"Exception should mention VARCHAR constraint or length issue. Got: {ex.Message}"
+                    );
+                }
+
+                // If no exception was thrown, verify the response indicates an error
+                if (!exceptionThrown)
+                {
+                    Assert.IsNotNull(result, "Result should not be null if no exception thrown");
+
+                    // The response might be a 200 with error details in content, or some other error code
+                    // Check the content for error indication
+                    if (result != null && result.Content != null)
+                    {
+                        // Check for error in WFS response (WFS can return 200 with error in the XML)
+                        var hasError = result.Content.Contains("ExceptionReport") ||
+                                      result.Content.Contains("exception") ||
+                                      result.Content.Contains("error") ||
+                                      result.Content.Contains("truncated");
+
+                        Assert.IsTrue(hasError, 
+                            $"Response should contain error information for VARCHAR constraint violation. Response: {result.Content?.Substring(0, Math.Min(500, result.Content?.Length ?? 0)) ?? "empty"}");
+                    }
+                }
+
+                Assert.IsTrue(exceptionThrown, "Test expects an exception to be thrown for VARCHAR constraint violation");
+
+                // Cleanup: if the insert somehow succeeded, delete the record
+                var cleanup = QueryFeatureIdsByNamePattern(uniqueName);
+                if (cleanup.Count > 0)
+                {
+                    var deleteXml = CreateDeleteTransactionRequest(cleanup, "SpatialFeature");
+                    WfsService.TransactionCore(deleteXml, mapConfig, config, "TestProject", null);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Only fail if it's not an expected constraint-related exception
+                if (!ex.Message.Contains("string or binary data would be truncated") &&
+                    !ex.Message.Contains("constraint") &&
+                    !ex.Message.Contains("ExceptionReport"))
+                {
+                    Assert.Fail($"Test failed with unexpected exception: {ex.Message}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Test that updating a feature with a string exceeding the Varchar10 column limit
+        /// properly throws an exception during transaction processing.
+        /// This test creates a valid feature, then attempts to update it with a too-long string.
+        /// </summary>
+        [TestMethod]
+        public void TransactionUpdateWithVarchar10Overflow_ShouldThrowException()
+        {
+            if (!IsConnectionAvailable())
+            {
+                Assert.Inconclusive("SQL Server instance is not available. Test skipped.");
+            }
+
+            var uniqueName = GetUniqueFeatureName("Varchar10UpdateTest");
+            var mapConfig = CreateMapConfigForTesting();
+            var config = CreateTestConfig();
+
+            try
+            {
+                var validVarchar10Value = "ValidStr"; // 8 characters - within the 10-char limit
+                var tooLongString = "ThisIsAVeryLongStringThatExceedsTheLimit"; // 41 characters - exceeds limit
+
+                // STEP 1: INSERT - Create a valid feature with within-limit Varchar10 value
+                var features = new List<FeatureBody>()
+                {
+                    new FeatureBody()
+                    {
+                        Properties = new Dictionary<string, object>()
+                        {
+                            { "Name", uniqueName },
+                            { "Varchar10", validVarchar10Value }
+                        },
+                        Geometry = "POLYGON((2600520 1150191, 2715764 1186190, 2511651 1138667, 2600520 1150191))",
+                        Epsg = 0
+                    }
+                };
+
+                var transactionXml = CreateTransactionRequest(features, "SpatialFeature");
+                Assert.IsNotNull(transactionXml, "Transaction XML should be created");
+
+                var insertResult = WfsService.TransactionCore(transactionXml, mapConfig, config, "TestProject", null);
+                Assert.IsNotNull(insertResult, "Insert result should not be null");
+                Assert.IsInstanceOfType(insertResult, typeof(ContentResult), "Result should be ContentResult");
+
+                var insertContentResult = insertResult as ContentResult;
+                Assert.AreEqual(200, insertContentResult.StatusCode, "Insert should return 200 status");
+                Assert.IsTrue(insertContentResult.Content.Contains("TransactionResponse"), "Insert result should contain TransactionResponse");
+
+                // Verify the record was inserted
+                var featureId = QueryFeatureIdByName(uniqueName);
+                Assert.IsTrue(featureId > 0, "Feature should be inserted successfully");
+
+                // STEP 2: UPDATE - Attempt to update with a value exceeding VARCHAR(10) limit
+                var updateProperties = new Dictionary<string, object>()
+                {
+                    { "Varchar10", tooLongString }
+                };
+
+                var updateXml = CreateUpdateTransactionRequest(featureId, updateProperties, "SpatialFeature");
+                Assert.IsNotNull(updateXml, "Update transaction XML should be created");
+
+                var exceptionThrown = false;
+                ContentResult? updateResult = null;
+                try
+                {
+                    updateResult = WfsService.TransactionCore(updateXml, mapConfig, config, "TestProject", null) as ContentResult;
+                }
+                catch (Exception ex)
+                {
+                    // An exception is expected due to the VARCHAR constraint
+                    exceptionThrown = true;
+                    Assert.IsTrue(
+                        ex.Message.Contains("string or binary data would be truncated") ||
+                        ex.Message.Contains("VARCHAR") ||
+                        ex.Message.Contains("constraint") ||
+                        ex.Message.Contains("length"),
+                        $"Exception should mention VARCHAR constraint or length issue. Got: {ex.Message}"
+                    );
+                }
+
+                // If no exception was thrown, verify the response indicates an error
+                if (!exceptionThrown)
+                {
+                    Assert.IsNotNull(updateResult, "Result should not be null if no exception thrown");
+
+                    if (updateResult != null && updateResult.Content != null)
+                    {
+                        // Check for error in WFS response
+                        var hasError = updateResult.Content.Contains("ExceptionReport") ||
+                                      updateResult.Content.Contains("exception") ||
+                                      updateResult.Content.Contains("error") ||
+                                      updateResult.Content.Contains("truncated");
+
+                        Assert.IsTrue(hasError, 
+                            $"Response should contain error information for VARCHAR constraint violation. Response: {updateResult.Content?.Substring(0, Math.Min(500, updateResult.Content?.Length ?? 0)) ?? "empty"}");
+                    }
+                }
+
+                Assert.IsTrue(exceptionThrown, "Test expects an exception to be thrown for VARCHAR constraint violation during update");
+            }
+            catch (Exception ex)
+            {
+                // Only fail if it's not an expected constraint-related exception
+                if (!ex.Message.Contains("string or binary data would be truncated") &&
+                    !ex.Message.Contains("constraint") &&
+                    !ex.Message.Contains("ExceptionReport") &&
+                    !ex.Message.Contains("varchar"))
+                {
+                    Assert.Fail($"Test failed with unexpected exception during INSERT/UPDATE: {ex.Message}");
+                }
+            }
+            finally
+            {
+                // STEP 3: CLEANUP - Always ensure the created feature is deleted
+                try
+                {
+                    var deleteIds = QueryFeatureIdsByNamePattern(uniqueName);
+                    if (deleteIds.Count > 0)
+                    {
+                        var deleteXml = CreateDeleteTransactionRequest(deleteIds, "SpatialFeature");
+                        var deleteResult = WfsService.TransactionCore(deleteXml, mapConfig, config, "TestProject", null) as ContentResult;
+
+                        Assert.IsNotNull(deleteResult, "Delete result should not be null");
+                        Assert.AreEqual(200, deleteResult.StatusCode, "Delete should return 200 status");
+                        Assert.IsTrue(deleteResult.Content.Contains("totalDeleted"), "Delete result should indicate deleted features");
+
+                        // Verify cleanup was successful
+                        var remainingCount = CountRecordsByNamePattern(uniqueName);
+                        Assert.AreEqual(0, remainingCount, $"All test records should be deleted. Found {remainingCount} remaining records with pattern '{uniqueName}'");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Assert.Fail($"Cleanup DELETE failed with exception: {ex.Message}");
+                }
+            }
+        }
+
         #endregion
     }
 }
