@@ -13,6 +13,12 @@ namespace BMapr.GDAL.WebApi.Test
     {
         private const string ConnectionString = "Data Source=BAD-ZBOOK;Initial Catalog=GisData;Persist Security Info=True;User ID=sa;Password=sa;Pooling=False;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=True;Command Timeout=0";
 
+        /// <summary>
+        /// Unique identifier for this test run to ensure isolation from previous test runs
+        /// Uses timestamp and random guid to create truly unique feature names
+        /// </summary>
+        private static readonly string UniqueTestRunId = $"{DateTime.Now:yyyyMMdd_HHmmss}_{Guid.NewGuid().ToString().Substring(0, 8)}";
+
         private class TestLogger : ILogger<FeatureServiceMsSql>
         {
             public List<string> ErrorMessages { get; } = new List<string>();
@@ -49,6 +55,15 @@ namespace BMapr.GDAL.WebApi.Test
         }
 
         #region Helper Methods
+
+        /// <summary>
+        /// Creates a unique feature name by combining the base name with the test run ID
+        /// This ensures all features created in a test can be uniquely identified and deleted
+        /// </summary>
+        private static string GetUniqueFeatureName(string baseName)
+        {
+            return $"{baseName}_{UniqueTestRunId}";
+        }
 
         /// <summary>
         /// Converts a FeatureBody with properties to GML format for WFS Transaction
@@ -205,6 +220,81 @@ namespace BMapr.GDAL.WebApi.Test
         }
 
         /// <summary>
+        /// Queries the database to get ALL feature IDs matching a name pattern
+        /// Returns a list of IDs for all matching records
+        /// </summary>
+        private static List<long> QueryFeatureIdsByNamePattern(string namePattern)
+        {
+            var featureIds = new List<long>();
+            try
+            {
+                using (var connection = new SqlConnection(ConnectionString))
+                {
+                    connection.Open();
+                    using (var command = new SqlCommand(
+                        "SELECT [Id] FROM dbo.SpatialFeature WHERE [Name] LIKE @Pattern ORDER BY [Id] DESC",
+                        connection))
+                    {
+                        command.Parameters.AddWithValue("@Pattern", $"%{namePattern}%");
+                        using (var reader = command.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                featureIds.Add(Convert.ToInt64(reader["Id"]));
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error querying feature IDs: {ex.Message}");
+            }
+            return featureIds;
+        }
+
+        /// <summary>
+        /// Queries the database to get ALL feature IDs matching ANY of multiple name patterns
+        /// Returns a list of IDs for all matching records from any pattern
+        /// </summary>
+        private static List<long> QueryFeatureIdsByMultiplePatterns(params string[] namePatterns)
+        {
+            var featureIds = new List<long>();
+            try
+            {
+                using (var connection = new SqlConnection(ConnectionString))
+                {
+                    connection.Open();
+                    foreach (var pattern in namePatterns)
+                    {
+                        using (var command = new SqlCommand(
+                            "SELECT [Id] FROM dbo.SpatialFeature WHERE [Name] LIKE @Pattern ORDER BY [Id] DESC",
+                            connection))
+                        {
+                            command.Parameters.AddWithValue("@Pattern", $"%{pattern}%");
+                            using (var reader = command.ExecuteReader())
+                            {
+                                while (reader.Read())
+                                {
+                                    var id = Convert.ToInt64(reader["Id"]);
+                                    if (!featureIds.Contains(id))
+                                    {
+                                        featureIds.Add(id);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error querying feature IDs: {ex.Message}");
+            }
+            return featureIds;
+        }
+
+        /// <summary>
         /// Creates a WFS 1.1.0 Update transaction XML request with correct schema structure
         /// Filter contains a single FeatureId element with fid attribute
         /// </summary>
@@ -262,9 +352,10 @@ namespace BMapr.GDAL.WebApi.Test
 
         /// <summary>
         /// Creates a WFS 1.1.0 Delete transaction XML request with correct schema structure
+        /// Can delete multiple features by passing multiple feature IDs
         /// Filter array contains FeatureId elements with fid attributes
         /// </summary>
-        private string CreateDeleteTransactionRequest(long featureId, string layerName = "SpatialFeature")
+        private string CreateDeleteTransactionRequest(List<long> featureIds, string layerName = "SpatialFeature")
         {
             var xml = new System.Text.StringBuilder();
             xml.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
@@ -276,9 +367,16 @@ namespace BMapr.GDAL.WebApi.Test
             xml.AppendLine("  xsi:schemaLocation=\"http://www.opengis.net/wfs http://schemas.opengis.net/wfs/1.1.0/wfs.xsd\">");
 
             xml.AppendLine($"  <Delete typeName=\"{layerName}\">");
+
+            // FIXED: Create a single Filter element with multiple FeatureId children inside
+            // The XML schema expects: <Filter><FeatureId fid="..."/><FeatureId fid="..."/></Filter>
             xml.AppendLine("    <Filter>");
-            xml.AppendLine($"      <FeatureId fid=\"{layerName}.{featureId}\"/>");
+            foreach (var featureId in featureIds)
+            {
+                xml.AppendLine($"      <FeatureId fid=\"{layerName}.{featureId}\"/>");
+            }
             xml.AppendLine("    </Filter>");
+
             xml.AppendLine("  </Delete>");
             xml.AppendLine("</Transaction>");
             return xml.ToString();
@@ -309,6 +407,34 @@ namespace BMapr.GDAL.WebApi.Test
         }
 
         /// <summary>
+        /// Verifies that records matching the pattern have been deleted from the database
+        /// Returns the count of remaining records matching the pattern
+        /// </summary>
+        private static int CountRecordsByNamePattern(string namePattern)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(ConnectionString))
+                {
+                    connection.Open();
+                    using (var command = new SqlCommand(
+                        "SELECT COUNT(*) FROM dbo.SpatialFeature WHERE [Name] LIKE @Pattern",
+                        connection))
+                    {
+                        command.Parameters.AddWithValue("@Pattern", $"%{namePattern}%");
+                        var result = command.ExecuteScalar();
+                        return result != null ? Convert.ToInt32(result) : 0;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error counting records: {ex.Message}");
+                return -1;
+            }
+        }
+
+        /// <summary>
         /// Creates a test MapConfig with layer configuration for dbo.SpatialFeature
         /// </summary>
         private static MapConfig CreateMapConfigForTesting()
@@ -322,7 +448,7 @@ namespace BMapr.GDAL.WebApi.Test
                 TableName = "dbo.SpatialFeature",
                 Connection = ConnectionString,
                 Id = "Id",
-                IdType = "AutoInt",
+                IdType = "Incr",  // Changed from "AutoInt" to "Incr" so IDs are treated as Int64, not strings
                 GeometryFieldName = "Geometry",
                 EPSG = 2056,
                 WFSTuseMsSqlServerFeatureService = true,
@@ -362,13 +488,16 @@ namespace BMapr.GDAL.WebApi.Test
             try
             {
                 // Create test features with string data
+                var uniqueName1 = GetUniqueFeatureName("StringTest1");
+                var uniqueName2 = GetUniqueFeatureName("StringTest2");
+
                 var features = new List<FeatureBody>()
                 {
                     new FeatureBody()
                     {
                         Properties = new Dictionary<string, object>()
                         {
-                            { "Name", "StringTest1" },
+                            { "Name", uniqueName1 },
                             { "Description", "This is a long description with special characters: !@#$%^&*()" },
                             { "Varchar10", "Test1234" },
                             { "Varchar50", "This is a medium length string test" },
@@ -382,7 +511,7 @@ namespace BMapr.GDAL.WebApi.Test
                     {
                         Properties = new Dictionary<string, object>()
                         {
-                            { "Name", "StringTest2" },
+                            { "Name", uniqueName2 },
                             { "Description", "Second test with Unicode: Ñoño, Zürich, 日本" },
                             { "Varchar10", "Short" },
                             { "Varchar50", "Another medium test string" },
@@ -397,7 +526,7 @@ namespace BMapr.GDAL.WebApi.Test
                 // Create WFS Transaction XML with GML
                 var transactionXml = CreateTransactionRequest(features, "SpatialFeature");
                 Assert.IsNotNull(transactionXml, "Transaction XML should be created from features");
-                Assert.IsTrue(transactionXml.Contains("<Name>StringTest1"), "Transaction XML should contain feature data");
+                Assert.IsTrue(transactionXml.Contains($"<Name>{uniqueName1}"), "Transaction XML should contain feature data");
 
                 // Call WfsService.TransactionCore with the GML transaction
                 var mapConfig = CreateMapConfigForTesting();
@@ -414,10 +543,10 @@ namespace BMapr.GDAL.WebApi.Test
                 Assert.IsTrue(contentResult.Content.Contains("totalInserted"), "Result should indicate inserted features");
 
                 // Verify records were actually inserted to database
-                Assert.IsTrue(VerifyRecordExists("StringTest"), "String test records should exist in database after transaction.");
+                Assert.IsTrue(VerifyRecordExists(uniqueName1), "String test records should exist in database after transaction.");
 
                 // UPDATE: Modify the first inserted record
-                var featureId = QueryFeatureIdByName("StringTest1");
+                var featureId = QueryFeatureIdByName(uniqueName1);
                 Assert.IsTrue(featureId > 0, "Should successfully query inserted feature ID");
 
                 var updateProperties = new Dictionary<string, object>()
@@ -437,8 +566,11 @@ namespace BMapr.GDAL.WebApi.Test
                 Assert.IsTrue(updateContentResult.Content.Contains("TransactionResponse"), "Update result should contain TransactionResponse");
                 Assert.IsTrue(updateContentResult.Content.Contains("totalUpdated"), "Update result should indicate updated features");
 
-                // DELETE: Remove the updated record
-                var deleteXml = CreateDeleteTransactionRequest(featureId, "SpatialFeature");
+                // DELETE: Remove ALL inserted records by unique test run ID
+                var featureIds = QueryFeatureIdsByNamePattern(UniqueTestRunId);
+                Assert.IsTrue(featureIds.Count > 0, "Should find all inserted features");
+
+                var deleteXml = CreateDeleteTransactionRequest(featureIds, "SpatialFeature");
                 Assert.IsNotNull(deleteXml, "Delete transaction XML should be created");
 
                 var deleteResult = WfsService.TransactionCore(deleteXml, mapConfig, config, "TestProject", null);
@@ -449,6 +581,10 @@ namespace BMapr.GDAL.WebApi.Test
                 Assert.AreEqual(200, deleteContentResult.StatusCode, "Delete should have 200 status code");
                 Assert.IsTrue(deleteContentResult.Content.Contains("TransactionResponse"), "Delete result should contain TransactionResponse");
                 Assert.IsTrue(deleteContentResult.Content.Contains("totalDeleted"), "Delete result should indicate deleted features");
+
+                // CRITICAL: Verify records were actually deleted from database
+                var remainingCount = CountRecordsByNamePattern(UniqueTestRunId);
+                Assert.AreEqual(0, remainingCount, $"All test records should be deleted from database. Found {remainingCount} remaining records with pattern {UniqueTestRunId}");
             }
             catch (Exception ex)
             {
@@ -466,13 +602,17 @@ namespace BMapr.GDAL.WebApi.Test
 
             try
             {
+                var uniqueName1 = GetUniqueFeatureName("Parcel 1");
+                var uniqueName2 = GetUniqueFeatureName("NegativeIntegerTest");
+                var uniqueName3 = GetUniqueFeatureName("ZeroIntegerTest");
+
                 var features = new List<FeatureBody>()
                 {
                     new FeatureBody()
                     {
                         Properties = new Dictionary<string, object>()
                         {
-                            { "Name", "Parcel 1" },
+                            { "Name", uniqueName1 },
                             { "IntValue", 2147483647 },
                             { "BigIntValue", 9223372036854775807L }
                         },
@@ -483,7 +623,7 @@ namespace BMapr.GDAL.WebApi.Test
                     {
                         Properties = new Dictionary<string, object>()
                         {
-                            { "Name", "NegativeIntegerTest" },
+                            { "Name", uniqueName2 },
                             { "IntValue", -2147483648 },
                             { "BigIntValue", -9223372036854775808L }
                         },
@@ -494,7 +634,7 @@ namespace BMapr.GDAL.WebApi.Test
                     {
                         Properties = new Dictionary<string, object>()
                         {
-                            { "Name", "ZeroIntegerTest" },
+                            { "Name", uniqueName3 },
                             { "IntValue", 0 },
                             { "BigIntValue", 0L }
                         },
@@ -505,7 +645,7 @@ namespace BMapr.GDAL.WebApi.Test
 
                 var transactionXml = CreateTransactionRequest(features, "SpatialFeature");
                 Assert.IsNotNull(transactionXml, "Transaction XML should be created from features");
-                Assert.IsTrue(transactionXml.Contains("<Name>Parcel 1"), "Transaction XML should contain feature data");
+                Assert.IsTrue(transactionXml.Contains($"<Name>{uniqueName1}"), "Transaction XML should contain feature data");
 
                 var mapConfig = CreateMapConfigForTesting();
                 var config = CreateTestConfig();
@@ -517,10 +657,10 @@ namespace BMapr.GDAL.WebApi.Test
                 var contentResult = result as ContentResult;
                 Assert.AreEqual(200, contentResult.StatusCode, "Result should have 200 status code");
                 Assert.IsTrue(contentResult.Content.Contains("TransactionResponse"), "Result should contain TransactionResponse");
-                Assert.IsTrue(VerifyRecordExists("Parcel 1"), "Integer test records should exist.");
+                Assert.IsTrue(VerifyRecordExists(uniqueName1), "Integer test records should exist.");
 
                 // UPDATE: Modify the first inserted record
-                var featureId = QueryFeatureIdByName("Parcel 1");
+                var featureId = QueryFeatureIdByName(uniqueName1);
                 Assert.IsTrue(featureId > 0, "Should successfully query inserted feature ID");
 
                 var updateProperties = new Dictionary<string, object>()
@@ -539,8 +679,11 @@ namespace BMapr.GDAL.WebApi.Test
                 Assert.AreEqual(200, updateContentResult.StatusCode, "Update should have 200 status code");
                 Assert.IsTrue(updateContentResult.Content.Contains("totalUpdated"), "Update result should indicate updated features");
 
-                // DELETE: Remove the updated record
-                var deleteXml = CreateDeleteTransactionRequest(featureId, "SpatialFeature");
+                // DELETE: Remove ALL inserted records by unique test run ID
+                var featureIds = QueryFeatureIdsByNamePattern(UniqueTestRunId);
+                Assert.IsTrue(featureIds.Count > 0, "Should find all inserted features");
+
+                var deleteXml = CreateDeleteTransactionRequest(featureIds, "SpatialFeature");
                 Assert.IsNotNull(deleteXml, "Delete transaction XML should be created");
 
                 var deleteResult = WfsService.TransactionCore(deleteXml, mapConfig, config, "TestProject", null);
@@ -567,13 +710,18 @@ namespace BMapr.GDAL.WebApi.Test
 
             try
             {
+                var uniqueName1 = GetUniqueFeatureName("DecimalPositiveTest");
+                var uniqueName2 = GetUniqueFeatureName("DecimalNegativeTest");
+                var uniqueName3 = GetUniqueFeatureName("DecimalZeroTest");
+                var uniqueName4 = GetUniqueFeatureName("DecimalSmallValueTest");
+
                 var features = new List<FeatureBody>()
                 {
                     new FeatureBody()
                     {
                         Properties = new Dictionary<string, object>()
                         {
-                            { "Name", "DecimalPositiveTest" },
+                            { "Name", uniqueName1 },
                             { "DecimalValue", 12345.6789m },
                             { "FloatValue", 1234.56789 }
                         },
@@ -584,7 +732,7 @@ namespace BMapr.GDAL.WebApi.Test
                     {
                         Properties = new Dictionary<string, object>()
                         {
-                            { "Name", "DecimalNegativeTest" },
+                            { "Name", uniqueName2 },
                             { "DecimalValue", -98765.4321m },
                             { "FloatValue", -9876.54321 }
                         },
@@ -595,7 +743,7 @@ namespace BMapr.GDAL.WebApi.Test
                     {
                         Properties = new Dictionary<string, object>()
                         {
-                            { "Name", "DecimalZeroTest" },
+                            { "Name", uniqueName3 },
                             { "DecimalValue", 0.0000m },
                             { "FloatValue", 0.0 }
                         },
@@ -606,7 +754,7 @@ namespace BMapr.GDAL.WebApi.Test
                     {
                         Properties = new Dictionary<string, object>()
                         {
-                            { "Name", "DecimalSmallValueTest" },
+                            { "Name", uniqueName4 },
                             { "DecimalValue", 0.0001m },
                             { "FloatValue", 0.00001 }
                         },
@@ -617,7 +765,7 @@ namespace BMapr.GDAL.WebApi.Test
 
                 var transactionXml = CreateTransactionRequest(features, "SpatialFeature");
                 Assert.IsNotNull(transactionXml, "Transaction XML should be created from features");
-                Assert.IsTrue(transactionXml.Contains("<Name>DecimalPositiveTest"), "Transaction XML should contain feature data");
+                Assert.IsTrue(transactionXml.Contains($"<Name>{uniqueName1}"), "Transaction XML should contain feature data");
 
                 var mapConfig = CreateMapConfigForTesting();
                 var config = CreateTestConfig();
@@ -629,10 +777,10 @@ namespace BMapr.GDAL.WebApi.Test
                 var contentResult = result as ContentResult;
                 Assert.AreEqual(200, contentResult.StatusCode, "Result should have 200 status code");
                 Assert.IsTrue(contentResult.Content.Contains("TransactionResponse"), "Result should contain TransactionResponse");
-                Assert.IsTrue(VerifyRecordExists("DecimalPositiveTest"), "Decimal test records should exist.");
+                Assert.IsTrue(VerifyRecordExists(uniqueName1), "Decimal test records should exist.");
 
                 // UPDATE: Modify the first inserted record
-                var featureId = QueryFeatureIdByName("DecimalPositiveTest");
+                var featureId = QueryFeatureIdByName(uniqueName1);
                 Assert.IsTrue(featureId > 0, "Should successfully query inserted feature ID");
 
                 var updateProperties = new Dictionary<string, object>()
@@ -651,8 +799,11 @@ namespace BMapr.GDAL.WebApi.Test
                 Assert.AreEqual(200, updateContentResult.StatusCode, "Update should have 200 status code");
                 Assert.IsTrue(updateContentResult.Content.Contains("totalUpdated"), "Update result should indicate updated features");
 
-                // DELETE: Remove the updated record
-                var deleteXml = CreateDeleteTransactionRequest(featureId, "SpatialFeature");
+                // DELETE: Remove ALL inserted records by unique test run ID
+                var featureIds = QueryFeatureIdsByNamePattern(UniqueTestRunId);
+                Assert.IsTrue(featureIds.Count > 0, "Should find all inserted features");
+
+                var deleteXml = CreateDeleteTransactionRequest(featureIds, "SpatialFeature");
                 Assert.IsNotNull(deleteXml, "Delete transaction XML should be created");
 
                 var deleteResult = WfsService.TransactionCore(deleteXml, mapConfig, config, "TestProject", null);
@@ -679,13 +830,17 @@ namespace BMapr.GDAL.WebApi.Test
 
             try
             {
+                var uniqueName1 = GetUniqueFeatureName("BooleanTrueTest");
+                var uniqueName2 = GetUniqueFeatureName("BooleanFalseTest");
+                var uniqueName3 = GetUniqueFeatureName("BooleanNullTest");
+
                 var features = new List<FeatureBody>()
                 {
                     new FeatureBody()
                     {
                         Properties = new Dictionary<string, object>()
                         {
-                            { "Name", "BooleanTrueTest" },
+                            { "Name", uniqueName1 },
                             { "BooleanValue", true }
                         },
                         Geometry = "POLYGON((2600520 1150191, 2715764 1186190, 2511651 1138667, 2600520 1150191))",
@@ -695,7 +850,7 @@ namespace BMapr.GDAL.WebApi.Test
                     {
                         Properties = new Dictionary<string, object>()
                         {
-                            { "Name", "BooleanFalseTest" },
+                            { "Name", uniqueName2 },
                             { "BooleanValue", false }
                         },
                         Geometry = "POLYGON((2511651 1138667, 2600520 1150191, 2626895 1174666, 2511651 1138667))",
@@ -705,7 +860,7 @@ namespace BMapr.GDAL.WebApi.Test
                     {
                         Properties = new Dictionary<string, object>()
                         {
-                            { "Name", "BooleanNullTest" }
+                            { "Name", uniqueName3 }
                         },
                         Geometry = "POLYGON((2626895 1174666, 2715764 1186190, 2600520 1150191, 2626895 1174666))",
                         Epsg = 0
@@ -714,7 +869,7 @@ namespace BMapr.GDAL.WebApi.Test
 
                 var transactionXml = CreateTransactionRequest(features, "SpatialFeature");
                 Assert.IsNotNull(transactionXml, "Transaction XML should be created from features");
-                Assert.IsTrue(transactionXml.Contains("<Name>BooleanTrueTest"), "Transaction XML should contain feature data");
+                Assert.IsTrue(transactionXml.Contains($"<Name>{uniqueName1}"), "Transaction XML should contain feature data");
 
                 var mapConfig = CreateMapConfigForTesting();
                 var config = CreateTestConfig();
@@ -726,10 +881,10 @@ namespace BMapr.GDAL.WebApi.Test
                 var contentResult = result as ContentResult;
                 Assert.AreEqual(200, contentResult.StatusCode, "Result should have 200 status code");
                 Assert.IsTrue(contentResult.Content.Contains("TransactionResponse"), "Result should contain TransactionResponse");
-                Assert.IsTrue(VerifyRecordExists("BooleanTrueTest"), "Boolean test records should exist.");
+                Assert.IsTrue(VerifyRecordExists(uniqueName1), "Boolean test records should exist.");
 
                 // UPDATE: Modify the first inserted record
-                var featureId = QueryFeatureIdByName("BooleanTrueTest");
+                var featureId = QueryFeatureIdByName(uniqueName1);
                 Assert.IsTrue(featureId > 0, "Should successfully query inserted feature ID");
 
                 var updateProperties = new Dictionary<string, object>()
@@ -747,8 +902,11 @@ namespace BMapr.GDAL.WebApi.Test
                 Assert.AreEqual(200, updateContentResult.StatusCode, "Update should have 200 status code");
                 Assert.IsTrue(updateContentResult.Content.Contains("totalUpdated"), "Update result should indicate updated features");
 
-                // DELETE: Remove the updated record
-                var deleteXml = CreateDeleteTransactionRequest(featureId, "SpatialFeature");
+                // DELETE: Remove ALL inserted records by unique test run ID
+                var featureIds = QueryFeatureIdsByNamePattern(UniqueTestRunId);
+                Assert.IsTrue(featureIds.Count > 0, "Should find all inserted features");
+
+                var deleteXml = CreateDeleteTransactionRequest(featureIds, "SpatialFeature");
                 Assert.IsNotNull(deleteXml, "Delete transaction XML should be created");
 
                 var deleteResult = WfsService.TransactionCore(deleteXml, mapConfig, config, "TestProject", null);
@@ -775,6 +933,10 @@ namespace BMapr.GDAL.WebApi.Test
 
             try
             {
+                var uniqueName1 = GetUniqueFeatureName("Parcel 2");
+                var uniqueName2 = GetUniqueFeatureName("DateTimeYearMinTest");
+                var uniqueName3 = GetUniqueFeatureName("DateTimeYearMaxTest");
+
                 var dateStr1 = "2024-03-15";
                 var dateStr2 = "2000-01-01";
                 var dateStr3 = "2099-12-31";
@@ -788,7 +950,7 @@ namespace BMapr.GDAL.WebApi.Test
                     {
                         Properties = new Dictionary<string, object>()
                         {
-                            { "Name", "Parcel 2" },
+                            { "Name", uniqueName1 },
                             { "DateValue", dateStr1 },
                             { "DateTimeValue", dateTimeStr1 }
                         },
@@ -799,7 +961,7 @@ namespace BMapr.GDAL.WebApi.Test
                     {
                         Properties = new Dictionary<string, object>()
                         {
-                            { "Name", "DateTimeYearMinTest" },
+                            { "Name", uniqueName2 },
                             { "DateValue", dateStr2 },
                             { "DateTimeValue", dateTimeStr2 }
                         },
@@ -810,7 +972,7 @@ namespace BMapr.GDAL.WebApi.Test
                     {
                         Properties = new Dictionary<string, object>()
                         {
-                            { "Name", "DateTimeYearMaxTest" },
+                            { "Name", uniqueName3 },
                             { "DateValue", dateStr3 },
                             { "DateTimeValue", dateTimeStr3 }
                         },
@@ -821,7 +983,7 @@ namespace BMapr.GDAL.WebApi.Test
 
                 var transactionXml = CreateTransactionRequest(features, "SpatialFeature");
                 Assert.IsNotNull(transactionXml, "Transaction XML should be created from features");
-                Assert.IsTrue(transactionXml.Contains("<Name>Parcel 2"), "Transaction XML should contain feature data");
+                Assert.IsTrue(transactionXml.Contains($"<Name>{uniqueName1}"), "Transaction XML should contain feature data");
 
                 var mapConfig = CreateMapConfigForTesting();
                 var config = CreateTestConfig();
@@ -833,10 +995,10 @@ namespace BMapr.GDAL.WebApi.Test
                 var contentResult = result as ContentResult;
                 Assert.AreEqual(200, contentResult.StatusCode, "Result should have 200 status code");
                 Assert.IsTrue(contentResult.Content.Contains("TransactionResponse"), "Result should contain TransactionResponse");
-                Assert.IsTrue(VerifyRecordExists("Parcel 2"), "DateTime test records should exist after transaction.");
+                Assert.IsTrue(VerifyRecordExists(uniqueName1), "DateTime test records should exist after transaction.");
 
                 // UPDATE: Modify the first inserted record
-                var featureId = QueryFeatureIdByName("Parcel 2");
+                var featureId = QueryFeatureIdByName(uniqueName1);
                 Assert.IsTrue(featureId > 0, "Should successfully query inserted feature ID");
 
                 var updateProperties = new Dictionary<string, object>()
@@ -855,8 +1017,11 @@ namespace BMapr.GDAL.WebApi.Test
                 Assert.AreEqual(200, updateContentResult.StatusCode, "Update should have 200 status code");
                 Assert.IsTrue(updateContentResult.Content.Contains("totalUpdated"), "Update result should indicate updated features");
 
-                // DELETE: Remove the updated record
-                var deleteXml = CreateDeleteTransactionRequest(featureId, "SpatialFeature");
+                // DELETE: Remove ALL inserted records by unique test run ID
+                var featureIds = QueryFeatureIdsByNamePattern(UniqueTestRunId);
+                Assert.IsTrue(featureIds.Count > 0, "Should find all inserted features");
+
+                var deleteXml = CreateDeleteTransactionRequest(featureIds, "SpatialFeature");
                 Assert.IsNotNull(deleteXml, "Delete transaction XML should be created");
 
                 var deleteResult = WfsService.TransactionCore(deleteXml, mapConfig, config, "TestProject", null);
@@ -883,6 +1048,10 @@ namespace BMapr.GDAL.WebApi.Test
 
             try
             {
+                var uniqueName1 = GetUniqueFeatureName("GuidBinaryTest1");
+                var uniqueName2 = GetUniqueFeatureName("GuidBinaryTest2");
+                var uniqueName3 = GetUniqueFeatureName("GuidBinaryTest3");
+
                 var guid1 = Guid.NewGuid();
                 var guid2 = Guid.NewGuid();
                 var guid3 = Guid.NewGuid();
@@ -896,7 +1065,7 @@ namespace BMapr.GDAL.WebApi.Test
                     {
                         Properties = new Dictionary<string, object>()
                         {
-                            { "Name", "GuidBinaryTest1" },
+                            { "Name", uniqueName1 },
                             { "UniqueValue", guid1 },
                             { "BinaryValue", binaryData1 }
                         },
@@ -907,7 +1076,7 @@ namespace BMapr.GDAL.WebApi.Test
                     {
                         Properties = new Dictionary<string, object>()
                         {
-                            { "Name", "GuidBinaryTest2" },
+                            { "Name", uniqueName2 },
                             { "UniqueValue", guid2 },
                             { "BinaryValue", binaryData2 }
                         },
@@ -918,7 +1087,7 @@ namespace BMapr.GDAL.WebApi.Test
                     {
                         Properties = new Dictionary<string, object>()
                         {
-                            { "Name", "GuidBinaryTest3" },
+                            { "Name", uniqueName3 },
                             { "UniqueValue", guid3 },
                             { "BinaryValue", binaryData3 }
                         },
@@ -929,7 +1098,7 @@ namespace BMapr.GDAL.WebApi.Test
 
                 var transactionXml = CreateTransactionRequest(features, "SpatialFeature");
                 Assert.IsNotNull(transactionXml, "Transaction XML should be created from features");
-                Assert.IsTrue(transactionXml.Contains("<Name>GuidBinaryTest1"), "Transaction XML should contain feature data");
+                Assert.IsTrue(transactionXml.Contains($"<Name>{uniqueName1}"), "Transaction XML should contain feature data");
 
                 var mapConfig = CreateMapConfigForTesting();
                 var config = CreateTestConfig();
@@ -941,10 +1110,10 @@ namespace BMapr.GDAL.WebApi.Test
                 var contentResult = result as ContentResult;
                 Assert.AreEqual(200, contentResult.StatusCode, "Result should have 200 status code");
                 Assert.IsTrue(contentResult.Content.Contains("TransactionResponse"), "Result should contain TransactionResponse");
-                Assert.IsTrue(VerifyRecordExists("GuidBinaryTest1"), "Guid/Binary test records should exist.");
+                Assert.IsTrue(VerifyRecordExists(uniqueName1), "Guid/Binary test records should exist.");
 
                 // UPDATE: Modify the first inserted record
-                var featureId = QueryFeatureIdByName("GuidBinaryTest1");
+                var featureId = QueryFeatureIdByName(uniqueName1);
                 Assert.IsTrue(featureId > 0, "Should successfully query inserted feature ID");
 
                 var newGuid = Guid.NewGuid();
@@ -965,8 +1134,11 @@ namespace BMapr.GDAL.WebApi.Test
                 Assert.AreEqual(200, updateContentResult.StatusCode, "Update should have 200 status code");
                 Assert.IsTrue(updateContentResult.Content.Contains("totalUpdated"), "Update result should indicate updated features");
 
-                // DELETE: Remove the updated record
-                var deleteXml = CreateDeleteTransactionRequest(featureId, "SpatialFeature");
+                // DELETE: Remove ALL inserted records by unique test run ID
+                var featureIds = QueryFeatureIdsByNamePattern(UniqueTestRunId);
+                Assert.IsTrue(featureIds.Count > 0, "Should find all inserted features");
+
+                var deleteXml = CreateDeleteTransactionRequest(featureIds, "SpatialFeature");
                 Assert.IsNotNull(deleteXml, "Delete transaction XML should be created");
 
                 var deleteResult = WfsService.TransactionCore(deleteXml, mapConfig, config, "TestProject", null);
@@ -994,13 +1166,16 @@ namespace BMapr.GDAL.WebApi.Test
             try
             {
                 // Test simple records with minimal properties
+                var uniqueName1 = GetUniqueFeatureName("SimpleRecord1");
+                var uniqueName2 = GetUniqueFeatureName("SimpleRecord2");
+
                 var features = new List<FeatureBody>()
                 {
                     new FeatureBody()
                     {
                         Properties = new Dictionary<string, object>()
                         {
-                            { "Name", "SimpleRecord1" },
+                            { "Name", uniqueName1 },
                             { "Description", "First simple record" }
                         },
                         Geometry = "POLYGON((2600520 1150191, 2715764 1186190, 2511651 1138667, 2600520 1150191))",
@@ -1010,7 +1185,7 @@ namespace BMapr.GDAL.WebApi.Test
                     {
                         Properties = new Dictionary<string, object>()
                         {
-                            { "Name", "SimpleRecord2" },
+                            { "Name", uniqueName2 },
                             { "Description", "Second simple record" }
                         },
                         Geometry = "POLYGON((2511651 1138667, 2600520 1150191, 2626895 1174666, 2511651 1138667))",
@@ -1020,7 +1195,7 @@ namespace BMapr.GDAL.WebApi.Test
 
                 var transactionXml = CreateTransactionRequest(features, "SpatialFeature");
                 Assert.IsNotNull(transactionXml, "Transaction XML should be created from features");
-                Assert.IsTrue(transactionXml.Contains("<Name>SimpleRecord1"), "Transaction XML should contain feature data");
+                Assert.IsTrue(transactionXml.Contains($"<Name>{uniqueName1}"), "Transaction XML should contain feature data");
 
                 var mapConfig = CreateMapConfigForTesting();
                 var config = CreateTestConfig();
@@ -1032,10 +1207,10 @@ namespace BMapr.GDAL.WebApi.Test
                 var contentResult = result as ContentResult;
                 Assert.AreEqual(200, contentResult.StatusCode, "Result should have 200 status code");
                 Assert.IsTrue(contentResult.Content.Contains("TransactionResponse"), "Result should contain TransactionResponse");
-                Assert.IsTrue(VerifyRecordExists("SimpleRecord1"), "Simple test records should be inserted successfully.");
+                Assert.IsTrue(VerifyRecordExists(uniqueName1), "Simple test records should be inserted successfully.");
 
                 // UPDATE: Modify the first inserted record
-                var featureId = QueryFeatureIdByName("SimpleRecord1");
+                var featureId = QueryFeatureIdByName(uniqueName1);
                 Assert.IsTrue(featureId > 0, "Should successfully query inserted feature ID");
 
                 var updateProperties = new Dictionary<string, object>()
@@ -1053,8 +1228,11 @@ namespace BMapr.GDAL.WebApi.Test
                 Assert.AreEqual(200, updateContentResult.StatusCode, "Update should have 200 status code");
                 Assert.IsTrue(updateContentResult.Content.Contains("totalUpdated"), "Update result should indicate updated features");
 
-                // DELETE: Remove the updated record
-                var deleteXml = CreateDeleteTransactionRequest(featureId, "SpatialFeature");
+                // DELETE: Remove ALL inserted records by unique test run ID
+                var featureIds = QueryFeatureIdsByNamePattern(UniqueTestRunId);
+                Assert.IsTrue(featureIds.Count > 0, "Should find all inserted features");
+
+                var deleteXml = CreateDeleteTransactionRequest(featureIds, "SpatialFeature");
                 Assert.IsNotNull(deleteXml, "Delete transaction XML should be created");
 
                 var deleteResult = WfsService.TransactionCore(deleteXml, mapConfig, config, "TestProject", null);
@@ -1081,6 +1259,8 @@ namespace BMapr.GDAL.WebApi.Test
 
             try
             {
+                var uniqueName1 = GetUniqueFeatureName("Parcel 3");
+
                 var dateStr = "2024-03-15";
                 var dateTimeStr = "2024-03-15 14:30:45";
                 var testGuid = Guid.NewGuid();
@@ -1092,7 +1272,7 @@ namespace BMapr.GDAL.WebApi.Test
                     {
                         Properties = new Dictionary<string, object>()
                         {
-                            { "Name", "Parcel 3" },
+                            { "Name", uniqueName1 },
                             { "Description", "Comprehensive test with all data types" },
                             { "Varchar10", "Compre" },
                             { "Varchar50", "Comprehensive test record with mixed data" },
@@ -1115,7 +1295,7 @@ namespace BMapr.GDAL.WebApi.Test
 
                 var transactionXml = CreateTransactionRequest(features, "SpatialFeature");
                 Assert.IsNotNull(transactionXml, "Transaction XML should be created from features");
-                Assert.IsTrue(transactionXml.Contains("<Name>Parcel 3"), "Transaction XML should contain feature data");
+                Assert.IsTrue(transactionXml.Contains($"<Name>{uniqueName1}"), "Transaction XML should contain feature data");
 
                 var mapConfig = CreateMapConfigForTesting();
                 var config = CreateTestConfig();
@@ -1127,10 +1307,10 @@ namespace BMapr.GDAL.WebApi.Test
                 var contentResult = result as ContentResult;
                 Assert.AreEqual(200, contentResult.StatusCode, "Result should have 200 status code");
                 Assert.IsTrue(contentResult.Content.Contains("TransactionResponse"), "Result should contain TransactionResponse");
-                Assert.IsTrue(VerifyRecordExists("Parcel 3"), "Comprehensive mixed test record should exist.");
+                Assert.IsTrue(VerifyRecordExists(uniqueName1), "Comprehensive mixed test record should exist.");
 
                 // UPDATE: Modify the inserted record
-                var featureId = QueryFeatureIdByName("Parcel 3");
+                var featureId = QueryFeatureIdByName(uniqueName1);
                 Assert.IsTrue(featureId > 0, "Should successfully query inserted feature ID");
 
                 var newDateStr = "2025-12-25";
@@ -1155,8 +1335,11 @@ namespace BMapr.GDAL.WebApi.Test
                 Assert.AreEqual(200, updateContentResult.StatusCode, "Update should have 200 status code");
                 Assert.IsTrue(updateContentResult.Content.Contains("totalUpdated"), "Update result should indicate updated features");
 
-                // DELETE: Remove the updated record
-                var deleteXml = CreateDeleteTransactionRequest(featureId, "SpatialFeature");
+                // DELETE: Remove ALL inserted records by unique test run ID
+                var featureIds = QueryFeatureIdsByNamePattern(UniqueTestRunId);
+                Assert.IsTrue(featureIds.Count > 0, "Should find all inserted features");
+
+                var deleteXml = CreateDeleteTransactionRequest(featureIds, "SpatialFeature");
                 Assert.IsNotNull(deleteXml, "Delete transaction XML should be created");
 
                 var deleteResult = WfsService.TransactionCore(deleteXml, mapConfig, config, "TestProject", null);

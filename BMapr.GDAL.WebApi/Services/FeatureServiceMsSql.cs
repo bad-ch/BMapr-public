@@ -206,28 +206,40 @@ namespace BMapr.GDAL.WebApi.Services
         {
             LogSql(SqlLogEnabled, "-- DELETE");
 
+            if (featureList == null || featureList.Bodies == null || featureList.Bodies.Count == 0)
+            {
+                throw new ArgumentException("featureList is null or empty!");
+            }
+
             var transaction = Connection.BeginTransaction("BeginTransaction");
 
             try
             {
                 string idsToDelete;
+                var idList = featureList.Bodies.Select(x => x.Id).ToList();
 
                 if (IdType == "Number" || IdType == "Incr")
                 {
-                    idsToDelete = string.Join(',', featureList.Bodies.Select(x => x.Id));
+                    idsToDelete = string.Join(',', idList);
                 }
                 else // String or Guid
                 {
-                    idsToDelete = string.Join(',', featureList.Bodies.Select(x => $"'{x.Id}'"));
+                    idsToDelete = string.Join(',', idList.Select(x => $"'{x}'"));
                 }
 
                 var sql = $"DELETE FROM {TableName} WHERE {featureList.IdFieldName} IN ({idsToDelete}) ;";
-
                 LogSql(SqlLogEnabled, sql);
 
                 using (var cmd = new SqlCommand(sql, Connection, transaction))
                 {
-                    cmd.ExecuteNonQuery();
+                    var rowsAffected = cmd.ExecuteNonQuery();
+                    if (rowsAffected != featureList.Bodies.Count)
+                    {
+                        throw new InvalidOperationException(
+                            $"DELETE affected {rowsAffected} rows but expected to delete {featureList.Bodies.Count} rows. " +
+                            $"SQL: {sql} " +
+                            $"IDs: {string.Join(",", idList)}");
+                    }
                 }
 
                 transaction.Commit();
