@@ -5,10 +5,15 @@ using BMapr.GDAL.WebApi.Services.schemaWfs110;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("BMapr.GDAL.WebApi.Test")]
+
 namespace BMapr.GDAL.WebApi.Services
 {
     public class WfsService
     {
+        /// <summary>
+        /// Public Transaction method that handles mapconfig loading and delegation to core transaction processing
+        /// </summary>
         public static ActionResult Transaction(Config config, string project, string contentBody)
         {
             var mapMetadata = MapFileService.GetMapFromProject(project, config);
@@ -39,6 +44,18 @@ namespace BMapr.GDAL.WebApi.Services
                 WfsDebugService.WriteTransactioonRequest(config.DataProject(project).FullName, contentBody);
             }
 
+            // Extract map file folder for testability
+            var mapFileFolder = (new FileInfo(mapMetadata.Value.FilePath)).Directory?.FullName;
+
+            // Delegate to core method for actual processing
+            return TransactionCore(contentBody, mapConfig, config, project, mapFileFolder);
+        }
+
+        /// <summary>
+        /// Core transaction processing logic - independent from mapconfig loading for testability
+        /// </summary>
+        internal static ActionResult TransactionCore(string contentBody, MapConfig mapConfig, Config config, string project, string mapFileFolder)
+        {
             var contentNoNs = XmlService.RemoveAllNamespaces(contentBody);
             var contentCDATA = XmlService.SetCDATAForInserts(contentNoNs);
             var transaction = XmlService.DeserializeString<BMapr.GDAL.WebApi.Services.schemaWfs110.Transaction>(contentCDATA);
@@ -56,6 +73,7 @@ namespace BMapr.GDAL.WebApi.Services
 
             MapLayerConfig layerConfig = null;
             var layerName = string.Empty;
+            var nextValFilePath = string.Empty;
 
             var featureInsertCount = 0;
             var featureListInsert = new FeatureList()
@@ -66,8 +84,6 @@ namespace BMapr.GDAL.WebApi.Services
 
             if (transaction.Insert != null)
             {
-                var nextValFilePath = string.Empty;
-
                 foreach (var insert in transaction.Insert)
                 {
                     var featureBody = new FeatureBody();
@@ -94,13 +110,19 @@ namespace BMapr.GDAL.WebApi.Services
 
                         if (layerConfig.IdSquenceManual)
                         {
-                            var mapFileFolder = (new FileInfo(mapMetadata.Value.FilePath)).Directory?.FullName;
-                            nextValFilePath = Path.Combine(mapFileFolder, $"NextVal_{layerName}");
-
-                            if (File.Exists(nextValFilePath))
+                            if (!string.IsNullOrEmpty(mapFileFolder))
                             {
-                                var content = File.ReadAllText(nextValFilePath);
-                                featureIdCount = System.Convert.ToInt64(content);
+                                nextValFilePath = Path.Combine(mapFileFolder, $"NextVal_{layerName}");
+
+                                if (File.Exists(nextValFilePath))
+                                {
+                                    var content = File.ReadAllText(nextValFilePath);
+                                    featureIdCount = System.Convert.ToInt64(content);
+                                }
+                                else
+                                {
+                                    featureIdCount = layerConfig.IdSequenceStartValue;
+                                }
                             }
                             else
                             {
