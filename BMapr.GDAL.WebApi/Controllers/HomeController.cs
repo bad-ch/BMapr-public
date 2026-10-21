@@ -6,9 +6,6 @@ namespace BMapr.GDAL.WebApi.Controllers
 {
     public class HomeController : DefaultController
     {
-        private readonly ILogger<OgcController> _logger;
-        private readonly IMemoryCache _cache;
-
         public HomeController(ILogger<HomeController> logger, IConfiguration iConfig, IWebHostEnvironment environment, IMemoryCache cache) : base(iConfig, environment)
         {
         }

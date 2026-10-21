@@ -11,8 +11,6 @@ namespace BMapr.GDAL.WebApi.Services
     /// </summary>
     public class WmtsService
     {
-        private static ILogger<WmtsService> _logger;
-
         public static ActionResult HandleRequest(string project, string queryString, Config config)
         {
             var nameValueCollection = HttpUtility.ParseQueryString(queryString);
@@ -76,7 +74,7 @@ namespace BMapr.GDAL.WebApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError($"WMTS Service error, {project}, {ex.Message}");
+                Serilog.Log.Error($"WMTS Service error, {project}, {ex.Message}");
                 throw;
             }
 

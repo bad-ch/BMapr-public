@@ -89,7 +89,7 @@ namespace BMapr.GDAL.WebApi.Services
             {
                 imageObj = _mapObj.draw();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return null;
             }

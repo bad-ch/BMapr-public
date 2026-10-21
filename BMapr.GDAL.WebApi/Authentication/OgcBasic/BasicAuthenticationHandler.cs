@@ -20,7 +20,7 @@ namespace BMapr.GDAL.WebApi.Authentication.OgcBasic
 
         public bool IsAuthenticationSuccessfully(HttpContext context, ProjectSettings projectSettings, out string username)
         {
-            username = null;
+            username = null!;
             string authHeader = context.Request.Headers["Authorization"];
 
             if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Basic "))

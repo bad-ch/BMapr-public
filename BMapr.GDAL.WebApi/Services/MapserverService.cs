@@ -50,7 +50,7 @@ namespace BMapr.GDAL.WebApi.Services
             }
         }
 
-        public new Dictionary<string, object> GetMetadata(object obj)
+        public Dictionary<string, object> GetMetadata(object obj)
         {
             var result = new Dictionary<string, object>();
 

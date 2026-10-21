@@ -37,6 +37,8 @@ namespace BMapr.GDAL.WebApi.Controllers
         /// Endpoint (GET) for landing page
         /// </summary>
         /// <param name="project"></param>
+        /// <param name="service"></param>
+        /// <param name="f"></param>
         /// <returns></returns>
         [HttpGet("{project}")]
         [HttpHead("{project}")]
@@ -168,6 +170,7 @@ namespace BMapr.GDAL.WebApi.Controllers
         /// Endpoint (GET) conformance page
         /// </summary>
         /// <param name="project"></param>
+        /// <param name="f"></param>
         /// <returns></returns>
         [HttpGet("{project}/conformance")]
         [HttpHead("{project}/conformance")]
@@ -214,6 +217,7 @@ namespace BMapr.GDAL.WebApi.Controllers
         /// Endpoint (GET) collections page
         /// </summary>
         /// <param name="project"></param>
+        /// <param name="f"></param>
         /// <returns></returns>
         [HttpGet("{project}/collections")]
         [HttpHead("{project}/collections")]
@@ -256,8 +260,9 @@ namespace BMapr.GDAL.WebApi.Controllers
         /// Endpoint (GET) for feature/data page
         /// </summary>
         /// <param name="project"></param>
+        /// <param name="collectionId"></param>
+        /// <param name="f"></param>
         /// <returns></returns>
-        [HttpGet("{project}/collections/{collectionId}")]
         [HttpHead("{project}/collections/{collectionId}")]
         public ActionResult Collection(string project, string collectionId, [FromQuery] string f = "application/json")
         {
@@ -295,6 +300,8 @@ namespace BMapr.GDAL.WebApi.Controllers
         /// <param name="offset">paging start offset to skip</param>
         /// <param name="limit">page size</param>
         /// <param name="f">format of the queried data</param>
+        /// <param name="filterLang">filter language</param>
+        /// <param name="filter">filter expression</param>
         /// <param name="file">download data as file</param>
         /// <returns></returns>
         [HttpGet("{project}/collections/{collectionId}/items")]

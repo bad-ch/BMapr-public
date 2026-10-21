@@ -69,9 +69,9 @@ namespace BMapr.GDAL.WebApi.Services
                 GdalConfiguration.ConfigureOgr();
                 Ogr2OgrService.Execute(args.ToArray(), forceDim);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                //log.Error($"error ogr2ogr {filenameSource} to {filenameTarget}, message {ex.Message}");
+                //log.Error($"error ogr2ogr {filenameSource} to {filenameTarget}");
                 return false;
             }
 
@@ -250,9 +250,9 @@ namespace BMapr.GDAL.WebApi.Services
                 var crsDefinitions = JsonConvert.DeserializeObject<List<CrsDefinition>>(crsDefinitionsString);
                 crsDefinitionFound = crsDefinitions.FirstOrDefault(x => x.Epsg == epsg);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                //log.Error($"DES error: {pathCrsFile}, {ex}");
+                //log.Error($"DES error: {pathCrsFile}");
                 return null;
             }
 

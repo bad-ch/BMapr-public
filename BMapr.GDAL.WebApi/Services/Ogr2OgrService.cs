@@ -92,8 +92,6 @@ namespace BMapr.GDAL.WebApi.Services
             string pszClipDstSQL = null;
             string pszClipDstLayer = null;
             string pszClipDstWhere = null;
-            string pszSrcEncoding = null;
-            string pszDstEncoding = null;
             bool bExplodeCollections = false;
              string pszZField = null;
 
@@ -935,7 +933,7 @@ namespace BMapr.GDAL.WebApi.Services
                 System.Convert.ToDouble(pszStr);
                 return true;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return false;
             }
@@ -1705,9 +1703,9 @@ namespace BMapr.GDAL.WebApi.Services
                 return true;
 
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                //Log.Error($"Ogr2Ogr, TranslateLayer: {ex.Message}");
+                //Log.Error($"Ogr2Ogr, TranslateLayer: error");
                 return false;
             }
         }

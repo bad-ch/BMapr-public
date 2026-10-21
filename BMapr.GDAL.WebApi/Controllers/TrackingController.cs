@@ -50,7 +50,7 @@ namespace BMapr.GDAL.WebApi.Controllers
             {
                 location = JsonConvert.DeserializeObject<Location>(content);
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 return BadRequest();
             }
@@ -91,9 +91,8 @@ namespace BMapr.GDAL.WebApi.Controllers
         /// Save location data from Owntracks in a file database 
         /// </summary>
         /// <param name="project"></param>
+        /// <param name="location"></param>
         /// <returns></returns>
-        [BasicAuthorization]
-        [HttpPost("PushLocationV2/{project}")]
         public IActionResult PushLocationV2(string project, [FromBody] Location? location)
         {
             var dataPath = Config.Data?.FullName;
@@ -134,9 +133,8 @@ namespace BMapr.GDAL.WebApi.Controllers
         /// Save card data from Owntracks in a file database 
         /// </summary>
         /// <param name="project"></param>
+        /// <param name="card"></param>
         /// <returns></returns>
-        [BasicAuthorization]
-        [HttpPost("PushCard/{project}")]
         public IActionResult PushCard(string project, [FromBody] Card? card)
         {
             var dataPath = Config.Data?.FullName;

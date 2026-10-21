@@ -14,9 +14,6 @@ namespace BMapr.GDAL.WebApi.Controllers
     [Route("api/Proxy")]
     public class ProxyController : DefaultController
     {
-        private readonly ILogger<ProxyController> _logger;
-        private readonly IMemoryCache _cache;
-
         public ProxyController(ILogger<HomeController> logger, IConfiguration iConfig, IWebHostEnvironment environment, IMemoryCache cache) : base(iConfig, environment)
         {
         }

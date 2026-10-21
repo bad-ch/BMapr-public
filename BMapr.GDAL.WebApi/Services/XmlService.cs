@@ -60,7 +60,7 @@ namespace BMapr.GDAL.WebApi.Services
                 myReader.Close();
                 return newObject;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return default(T);
             }

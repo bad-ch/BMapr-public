@@ -38,6 +38,8 @@ namespace BMapr.GDAL.WebApi.Controllers
         /// <param name="offset">paging start offset to skip</param>
         /// <param name="limit">page size</param>
         /// <param name="f">format of the queried data</param>
+        /// <param name="filterLang">filter language</param>
+        /// <param name="filter">filter expression</param>
         /// <param name="file">download data as file</param>
         /// <returns></returns>
         [HttpGet("{project}/collections/{collectionId}/items")]

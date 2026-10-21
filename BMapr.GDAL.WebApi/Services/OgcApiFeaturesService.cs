@@ -307,8 +307,6 @@ namespace BMapr.GDAL.WebApi.Services
                     else if (bbox.Count == 6)
                     {
                         throw new NotImplementedException("bbox with 6 values not implemented");
-                        layer.SetSpatialFilter(
-                            Geometry.CreateFromWkt($"POLYGON(({bbox[0]} {bbox[1]}, {bbox[3]} {bbox[1]},{bbox[3]} {bbox[4]}, {bbox[0]} {bbox[4]}, {bbox[0]} {bbox[1]}))"));
                     }
                     else
                     {

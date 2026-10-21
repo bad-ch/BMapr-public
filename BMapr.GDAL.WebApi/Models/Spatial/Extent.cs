@@ -190,10 +190,10 @@
             return true;
         }
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             double tol = 0.001;
-            if (obj.GetType().Equals(typeof(Extent)))
+            if (obj?.GetType().Equals(typeof(Extent)) == true)
             {
                 var ext = obj as Extent;
                 return Math.Abs(ext.Xmax - this.Xmax) < tol && Math.Abs(ext.Xmin - this.Xmin) < tol && Math.Abs(ext.Ymax - this.Ymax) < tol && Math.Abs(ext.Ymin - this.Ymin) < tol;
@@ -204,6 +204,11 @@
         public override string ToString()
         {
             return string.Format("({0},{1}/{2},{3})", this.Xmin, this.Ymin, this.Xmax, this.Ymax);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(Xmin, Ymin, Xmax, Ymax);
         }
 
         public Extent Join(Extent extent)

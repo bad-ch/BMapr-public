@@ -205,7 +205,7 @@ namespace BMapr.GDAL.WebApi.Models.Spatial.Style
                 ";
                 }
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 //todo default style ??
             }

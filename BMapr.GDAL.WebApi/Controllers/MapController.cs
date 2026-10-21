@@ -22,6 +22,16 @@ public class MapController : DefaultController
     /// Endpoint get image from mapfile
     /// </summary>
     /// <param name="project"></param>
+    /// <param name="xmin"></param>
+    /// <param name="ymin"></param>
+    /// <param name="xmax"></param>
+    /// <param name="ymax"></param>
+    /// <param name="width"></param>
+    /// <param name="height"></param>
+    /// <param name="format"></param>
+    /// <param name="epsg"></param>
+    /// <param name="layers"></param>
+    /// <param name="cancellationToken"></param>
     /// <returns></returns>
     [HttpGet("{project}")]
     [HttpHead("{project}")]
