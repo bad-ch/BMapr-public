@@ -9,14 +9,12 @@ namespace BMapr.GDAL.WebApi.Models.Job
     public class JobEngine : IJob
     {
         private readonly ILogger<JobEngine> Logger;
-        private readonly ISchedulerFactory Factory;
         private readonly IConfiguration IConfig;
         public readonly Config Config;
 
-        public JobEngine(ILogger<JobEngine> logger, ISchedulerFactory factory, IConfiguration iConfig, IWebHostEnvironment environment)
+        public JobEngine(ILogger<JobEngine> logger, IConfiguration iConfig, IWebHostEnvironment environment)
         {
             Logger = logger;
-            Factory = factory;
             IConfig = iConfig;
             Config = ConfigService.Get(iConfig, environment);
         }
@@ -49,6 +47,8 @@ namespace BMapr.GDAL.WebApi.Models.Job
                 Logger.LogInformation($"***********************************************************************");
             }
 
+            var scheduler = context.Scheduler;
+
             foreach (var folder in Config.DataProjects?.GetDirectories()!)
             {
                 var project = folder.Name;
@@ -67,16 +67,15 @@ namespace BMapr.GDAL.WebApi.Models.Job
                         continue;
                     }
 
-                    AddJob(project, job, jobContent);
+                    AddJob(scheduler, project, job, jobContent);
                 }
             }
 
             return ValueTask.CompletedTask;
         }
 
-        public async void AddJob(string project, Job job, string jobContent)
+        public async void AddJob(IScheduler scheduler, string project, Job job, string jobContent)
         {
-            var scheduler = await Factory.GetScheduler();
             var currentProcess = Process.GetCurrentProcess();
 
             IJobDetail jobDetail = JobBuilder.Create<JobGod>()
