@@ -13,14 +13,14 @@ namespace BMapr.GDAL.WebApi.Services.Jobs
             Factory = factory;
         }
 
-        public Task Execute(IJobExecutionContext context)
+        public ValueTask Execute(IJobExecutionContext context, CancellationToken cancellationToken = default)
         {
             var dataMap = context.JobDetail.JobDataMap;
 
-            var processId = dataMap.GetIntValue("processId");
+            var processId = Convert.ToInt32(dataMap["processId"]);
 
             Logger.LogError($"*** TEST, process id {processId}");
-            return Task.FromResult(true);
+            return ValueTask.CompletedTask;
         }
     }
 }

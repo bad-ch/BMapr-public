@@ -3,7 +3,6 @@ using BMapr.GDAL.WebApi.Services.Jobs;
 using Newtonsoft.Json;
 using Quartz;
 using System.Diagnostics;
-using static Quartz.Logging.OperationName;
 
 namespace BMapr.GDAL.WebApi.Models.Job
 {
@@ -22,10 +21,10 @@ namespace BMapr.GDAL.WebApi.Models.Job
             Config = ConfigService.Get(iConfig, environment);
         }
 
-        public Task Execute(IJobExecutionContext context)
+        public ValueTask Execute(IJobExecutionContext context, CancellationToken cancellationToken = default)
         {
             var dataMap = context.JobDetail.JobDataMap;
-            var processId = dataMap.GetIntValue("processId");
+            var processId = Convert.ToInt32(dataMap["processId"]);
 
             Logger.LogInformation($"*** Ini Jobs for all projects, process id {processId}");
 
@@ -41,7 +40,7 @@ namespace BMapr.GDAL.WebApi.Models.Job
                 Logger.LogInformation($"***********************************************************************");
                 Logger.LogInformation($"**** Job-Engine is DISABLED");
                 Logger.LogInformation($"***********************************************************************");
-                return Task.FromResult(true);
+                return ValueTask.CompletedTask;
             }
             else
             {
@@ -72,7 +71,7 @@ namespace BMapr.GDAL.WebApi.Models.Job
                 }
             }
 
-            return Task.FromResult(true);
+            return ValueTask.CompletedTask;
         }
 
         public async void AddJob(string project, Job job, string jobContent)

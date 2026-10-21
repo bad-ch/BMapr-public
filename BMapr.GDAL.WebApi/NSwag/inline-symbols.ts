@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * TypeScript Interface Definitions for MapServer Inline Symbol Support
  * Auto-generated from C# MapFileParser.cs

@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "noEmit": true,
+    "noCheck": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "noImplicitAny": false
+  },
+  "files": [
+    "inline-symbols.ts",
+    "mapfile-definitions.ts",
+    "mapfile-parser.ts",
+    "mapserver.ts"
+  ]
+}

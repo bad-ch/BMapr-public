@@ -74,8 +74,6 @@ builder.Logging.AddSerilog(logger);
 
 var service = builder.Services.AddQuartz(q =>
 {
-    q.UseMicrosoftDependencyInjectionJobFactory();
-
     var jobKey = new JobKey("JobEngine");
     var currentProcess = Process.GetCurrentProcess();
 
@@ -87,7 +85,7 @@ var service = builder.Services.AddQuartz(q =>
         .StartNow());
 });
 
-builder.Services.AddQuartzServer(options =>
+builder.Services.AddQuartzHostedService(options =>
 {
     options.WaitForJobsToComplete = true;
 });

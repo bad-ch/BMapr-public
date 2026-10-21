@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using Quartz;
-using Quartz.Impl.Matchers;
 
 namespace BMapr.GDAL.WebApi.Controllers
 {
@@ -24,32 +23,25 @@ namespace BMapr.GDAL.WebApi.Controllers
         public async Task<IActionResult> List()
         {
             var scheduler = await _factory.GetScheduler();
-            var allTriggerKeys = scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup());
+            var allTriggerKeys = await scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup());
             var jobsInfo = new List<object>();
 
-            foreach (var triggerKey in allTriggerKeys.Result)
+            foreach (var triggerKey in allTriggerKeys)
             {
-                var triggerDetails = scheduler.GetTrigger(triggerKey);
+                var trigger = await scheduler.GetTrigger(triggerKey);
 
-                if (triggerDetails?.Result?.JobKey == null)
+                if (trigger?.JobKey == null)
                 {
                     continue;
                 }
 
-                var jobDetails = scheduler.GetJobDetail(triggerDetails.Result?.JobKey);
-
                 jobsInfo.Add(new
                 {
-                    TriggerKey = triggerDetails.Result.Key.Name, 
-                    JobKey = triggerDetails.Result.JobKey.Name,
-                    triggerDetails.IsCompleted,
-                    triggerDetails.IsCompletedSuccessfully,
-                    triggerDetails.Status,
-                    triggerDetails.Result.StartTimeUtc,
-                    triggerDetails.Result.EndTimeUtc,
-                    triggerDetails.Result.FinalFireTimeUtc,
-                    nextFire = triggerDetails.Result.GetNextFireTimeUtc(),
-                    lastFire = triggerDetails.Result.GetPreviousFireTimeUtc()
+                    TriggerKey = trigger.Key.Name,
+                    JobKey = trigger.JobKey.Name,
+                    trigger.StartTimeUtc,
+                    trigger.EndTimeUtc,
+                    trigger.FinalFireTimeUtc
                 });
             }
 
