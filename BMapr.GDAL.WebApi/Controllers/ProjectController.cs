@@ -441,7 +441,16 @@ namespace BMapr.GDAL.WebApi.Controllers
                 Config.Host = HostService.Get(Request, IConfig);
 
                 var mapPath = Config.DataProject(project).FullName;
-                var mapFile = Path.Combine(mapPath, $"ZZZ_{Guid.NewGuid()}.map");
+
+                // Find the first existing .map file in mapPath
+                var mapFiles = new DirectoryInfo(mapPath).GetFiles("*.map", SearchOption.AllDirectories);
+                if (mapFiles.Length == 0)
+                {
+                    _logger.LogError($"UpdateMapFileData: No map file found in project {project}");
+                    return BadRequest("No existing map file found in project");
+                }
+
+                var existingMapFile = mapFiles[0].FullName;
 
                 DefaultContractResolver contractResolver = new DefaultContractResolver
                 {
@@ -466,9 +475,15 @@ namespace BMapr.GDAL.WebApi.Controllers
 
                 var map = mapObjDeserialized.ToMapfileString();
 
-                System.IO.File.WriteAllText(mapFile, map);
+                // Create a backup of the existing file with sequential naming
+                string backupFilePath = GetNextBackupFilePath(existingMapFile);
+                System.IO.File.Copy(existingMapFile, backupFilePath, overwrite: false);
+                _logger.LogInformation($"UpdateMapFileData: Created backup file at {backupFilePath}");
 
-                _logger.LogInformation($"UpdateMapFileData: Successfully updated map file for project {project}");
+                // Save the new map data to the original file location
+                System.IO.File.WriteAllText(existingMapFile, map);
+
+                _logger.LogInformation($"UpdateMapFileData: Successfully updated map file for project {project} at {existingMapFile}");
                 return Ok();
             }
             catch (Exception ex)
@@ -890,6 +905,37 @@ namespace BMapr.GDAL.WebApi.Controllers
                 ContentType = "application/json",
                 StatusCode = 200
             };
+        }
+
+        /// <summary>
+        /// Generate the next available backup filename with sequential naming (.bak, .bak2, .bak3, etc.)
+        /// </summary>
+        /// <param name="originalFilePath">Path to the original map file</param>
+        /// <returns>Full path to the next available backup file</returns>
+        private string GetNextBackupFilePath(string originalFilePath)
+        {
+            string directory = Path.GetDirectoryName(originalFilePath);
+            string filename = Path.GetFileNameWithoutExtension(originalFilePath);
+            string extension = Path.GetExtension(originalFilePath);
+
+            // First backup: .bak
+            string backupPath = Path.Combine(directory, $"{filename}.bak");
+            if (!System.IO.File.Exists(backupPath))
+            {
+                return backupPath;
+            }
+
+            // Subsequent backups: .bak2, .bak3, etc.
+            int backupNumber = 2;
+            while (true)
+            {
+                backupPath = Path.Combine(directory, $"{filename}.bak{backupNumber}");
+                if (!System.IO.File.Exists(backupPath))
+                {
+                    return backupPath;
+                }
+                backupNumber++;
+            }
         }
     }
 }
