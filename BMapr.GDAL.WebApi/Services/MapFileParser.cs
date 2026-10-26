@@ -816,6 +816,69 @@ namespace BMapr.GDAL.WebApi.Services
                     continue;
                 }
 
+                // Special handling: PATTERN blocks inside STYLE
+                if (head == "PATTERN")
+                {
+                    var ctxStyle = stack.Peek();
+                    if (ctxStyle.Type != CtxType.Style)
+                    {
+                        // Not in a STYLE context, treat as regular key-value
+                        // (PATTERN can also appear on a single line as a key-value)
+                        if (stack.Count > 0)
+                        {
+                            if (ctxStyle.Type == CtxType.Style) 
+                                ApplyKeyValuesToStyle((StyleObj)ctxStyle.Node, tokens);
+                        }
+                        continue;
+                    }
+
+                    var style = (StyleObj)ctxStyle.Node;
+                    var patternList = new List<double>();
+
+                    // Collect numbers from the current line if any follow PATTERN
+                    foreach (var v in tokens.Skip(1))
+                    {
+                        if (v.ToUpperInvariant() == "END") break;
+                        if (double.TryParse(v, NumberStyles.Float, CultureInfo.InvariantCulture, out var d))
+                            patternList.Add(d);
+                    }
+
+                    // If no END on this line, read more lines until END
+                    if (!tokens.Skip(1).Any(t => t.ToUpperInvariant() == "END"))
+                    {
+                        bool foundPatternEnd = false;
+                        while ((raw = sr.ReadLine()) != null)
+                        {
+                            lineNo++;
+                            var innerStripped = StripComments(raw);
+                            var innerTokens = Tokenize(innerStripped);
+                            if (innerTokens.Count > 0)
+                            {
+                                var innerHead = innerTokens[0].ToUpperInvariant();
+                                if (innerHead == "END")
+                                {
+                                    foundPatternEnd = true;
+                                    break;
+                                }
+                                foreach (var v in innerTokens)
+                                {
+                                    if (double.TryParse(v, NumberStyles.Float, CultureInfo.InvariantCulture, out var d))
+                                        patternList.Add(d);
+                                }
+                            }
+                        }
+                        if (!foundPatternEnd)
+                            throw new FormatException($"PATTERN block at line {lineNo} is missing closing END");
+                    }
+
+                    if (patternList.Count > 0)
+                    {
+                        foreach (var d in patternList)
+                            style.Pattern.Add(d);
+                    }
+                    continue;
+                }
+
                 if (head == "END") { if (stack.Count == 0) throw new FormatException($"Unexpected END at line {lineNo}"); stack.Pop(); continue; }
 
                 if (stack.Count == 0) continue; // Allow final END to pop MAP context
@@ -1286,19 +1349,19 @@ namespace BMapr.GDAL.WebApi.Services
         // Helpers
         internal static string StripCommentsPublic(string line)
         {
-            var sb = new StringBuilder(line.Length); bool inQuotes = false; for (int i = 0; i < line.Length; i++) { var c = line[i]; if (c == '"') { inQuotes = !inQuotes; sb.Append(c); } else if (!inQuotes && c == '#') { break; } else { sb.Append(c); } }
+            var sb = new StringBuilder(line.Length); char quote = '\0'; for (int i = 0; i < line.Length; i++) { var c = line[i]; if (quote == '\0' && (c == '"' || c == '\'')) { quote = c; sb.Append(c); } else if (quote != '\0' && c == quote) { quote = '\0'; sb.Append(c); } else if (quote == '\0' && c == '#') { break; } else { sb.Append(c); } }
             return sb.ToString().Trim();
         }
         private static string StripComments(string line) => StripCommentsPublic(line);
 
         internal static List<string> TokenizePublic(string line)
         {
-            var tokens = new List<string>(); var sb = new StringBuilder(); bool inQuotes = false; void Flush() { if (sb.Length > 0) { tokens.Add(sb.ToString()); sb.Clear(); } }
-            for (int i = 0; i < line.Length; i++) { char c = line[i]; if (c == '"') { sb.Append(c); inQuotes = !inQuotes; } else if (!inQuotes && char.IsWhiteSpace(c)) { Flush(); } else { sb.Append(c); } }
+            var tokens = new List<string>(); var sb = new StringBuilder(); char quote = (char)0; void Flush() { if (sb.Length > 0) { tokens.Add(sb.ToString()); sb.Clear(); } }
+            for (int i = 0; i < line.Length; i++) { char c = line[i]; if (quote == (char)0 && (c == (char)34 || c == (char)39)) { sb.Append(c); quote = c; } else if (quote != (char)0 && c == quote) { sb.Append(c); quote = (char)0; } else if (quote == (char)0 && char.IsWhiteSpace(c)) { Flush(); } else { sb.Append(c); } }
             Flush(); return tokens;
         }
         private static List<string> Tokenize(string line) => TokenizePublic(line);
-        private static string Unquote(string s) { s = s.Trim(); if (s.Length >= 2 && s[0] == '"' && s[^1] == '"') { var inner = s.Substring(1, s.Length - 2); return inner.Replace("\\\"", "\""); } return s; }
+        private static string Unquote(string s) { s = s.Trim(); if (s.Length >= 2 && s[0] == '"' && s[^1] == '"') { var inner = s.Substring(1, s.Length - 2); return inner.Replace("\\\"", "\""); } if (s.Length >= 2 && s[0] == '\'' && s[^1] == '\'') return s.Substring(1, s.Length - 2); return s; }
         private static double[] ParseDoubles(List<string> vals, int expected) { if (vals.Count < expected) throw new FormatException($"Expected {expected} numbers, got {vals.Count}"); var arr = new double[expected]; for (int i = 0; i < expected; i++) arr[i] = double.Parse(vals[i], CultureInfo.InvariantCulture); return arr; }
         private static int[] ParseInts(List<string> vals, int expected) { if (vals.Count < expected) throw new FormatException($"Expected {expected} integers, got {vals.Count}"); var arr = new int[expected]; for (int i = 0; i < expected; i++) arr[i] = int.Parse(vals[i], CultureInfo.InvariantCulture); return arr; }
         private static double ParseDouble(List<string> vals) { if (vals.Count < 1) throw new FormatException("Expected a numeric value"); return double.Parse(vals[0], CultureInfo.InvariantCulture); }
